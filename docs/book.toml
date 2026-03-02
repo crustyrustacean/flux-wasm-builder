@@ -1,0 +1,28 @@
+[book]
+title = "flux-wasm-builder Documentation"
+authors = ["Jeff Mitchell"]
+description = "A single-command build tool for fullstack Rust web applications"
+language = "en"
+src = "src"
+
+[build]
+build-dir = "book"
+create-missing = true
+
+[output.html]
+git-repository-url = "https://github.com/crustyrustacean/flux-wasm-builder"
+edit-url-template = "https://github.com/crustyrustacean/flux-wasm-builder/edit/main/docs/{path}"
+site-url = "/flux-wasm-builder/"
+cname = "crustyrustacean.github.io"
+
+[output.html.search]
+enable = true
+limit-results = 30
+use-boolean-and = true
+
+[output.html.print]
+enable = true
+
+[output.html.fold]
+enable = true
+level = 1
