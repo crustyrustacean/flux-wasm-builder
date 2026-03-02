@@ -5,10 +5,15 @@
 //! This module provides handlers for serving:
 //! - Files from the `pkg/` directory (WASM, JS, and other build artifacts)
 //! - SPA fallback to `index.html` for client-side routing
+//!
+//! In development mode, the SPA fallback injects a reload script
+//! that establishes a WebSocket connection for live reload.
 
 use actix_web::{web, HttpResponse, Responder};
 
 use super::build::BuildConfig;
+use super::reload::inject_reload_script;
+use super::DevMode;
 
 /// Serve a file from the pkg/ directory.
 ///
@@ -69,16 +74,32 @@ pub async fn serve_pkg_file(
 ///
 /// This enables client-side routing in the Yew frontend.
 /// Any route not matched by API or static asset handlers will receive index.html.
-pub async fn spa_fallback(config: web::Data<BuildConfig>) -> impl Responder {
+///
+/// In development mode (`DevMode(true)`), the reload script is injected
+/// into the HTML before serving to enable live reload.
+pub async fn spa_fallback(
+    config: web::Data<BuildConfig>,
+    dev_mode: web::Data<DevMode>,
+) -> impl Responder {
     let span = tracing::debug_span!("spa_fallback");
     let _enter = span.enter();
 
     match tokio::fs::read(&config.index_html_path).await {
         Ok(bytes) => {
             tracing::debug!(path = %config.index_html_path.display(), "serving index.html");
+            
+            let html = if dev_mode.0 {
+                // Dev mode: inject reload script
+                let html_str = String::from_utf8_lossy(&bytes);
+                inject_reload_script(&html_str).into_bytes()
+            } else {
+                // Release mode: serve as-is
+                bytes
+            };
+            
             HttpResponse::Ok()
                 .content_type("text/html; charset=utf-8")
-                .body(bytes)
+                .body(html)
         }
         Err(e) => {
             tracing::error!(
@@ -196,6 +217,7 @@ mod tests {
         let app = test::init_service(
             App::new()
                 .app_data(web::Data::new(config))
+                .app_data(web::Data::new(DevMode(false)))
                 .default_service(web::get().to(spa_fallback)),
         )
         .await;
@@ -220,6 +242,7 @@ mod tests {
         let app = test::init_service(
             App::new()
                 .app_data(web::Data::new(config))
+                .app_data(web::Data::new(DevMode(false)))
                 .route("/api/hello", web::get().to(hello))
                 .default_service(web::get().to(spa_fallback)),
         )
@@ -230,6 +253,56 @@ mod tests {
         assert!(
             !ct.contains("text/html"),
             "API route returned index.html instead of JSON"
+        );
+    }
+
+    #[actix_web::test]
+    async fn index_html_contains_reload_script_when_dev_mode_true() {
+        let dir = tempdir().unwrap();
+        let index = dir.path().join("index.html");
+        std::fs::write(&index, b"<html><body></body></html>").unwrap();
+        let config = BuildConfig {
+            index_html_path: index,
+            ..BuildConfig::new("/unused")
+        };
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(config))
+                .app_data(web::Data::new(DevMode(true)))
+                .default_service(web::get().to(spa_fallback)),
+        )
+        .await;
+        let body = test::read_body(
+            test::call_service(&app, test::TestRequest::get().uri("/").to_request()).await
+        ).await;
+        assert!(
+            std::str::from_utf8(&body).unwrap().contains("/ws/reload"),
+            "index.html should contain reload script in dev mode"
+        );
+    }
+
+    #[actix_web::test]
+    async fn index_html_omits_reload_script_when_dev_mode_false() {
+        let dir = tempdir().unwrap();
+        let index = dir.path().join("index.html");
+        std::fs::write(&index, b"<html><body></body></html>").unwrap();
+        let config = BuildConfig {
+            index_html_path: index,
+            ..BuildConfig::new("/unused")
+        };
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(config))
+                .app_data(web::Data::new(DevMode(false)))
+                .default_service(web::get().to(spa_fallback)),
+        )
+        .await;
+        let body = test::read_body(
+            test::call_service(&app, test::TestRequest::get().uri("/").to_request()).await
+        ).await;
+        assert!(
+            !std::str::from_utf8(&body).unwrap().contains("/ws/reload"),
+            "index.html should not contain reload script in release mode"
         );
     }
 }

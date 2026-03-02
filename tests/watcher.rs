@@ -7,7 +7,7 @@ use std::time::Duration;
 
 use flux_wasm_builder::{start_watcher, run_build_loop, BuildError};
 use tempfile::tempdir;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, broadcast};
 
 // =============================================================================
 // Watcher Integration Tests
@@ -117,13 +117,14 @@ fn dropping_watcher_stops_events() {
 #[tokio::test]
 async fn single_trigger_causes_one_build() {
     let (tx, rx) = mpsc::channel(8);
+    let (reload_tx, _reload_rx) = broadcast::channel::<()>(16);
     let count = std::sync::Arc::new(std::sync::Mutex::new(0u32));
     let c = count.clone();
 
     tx.send(()).await.unwrap();
     drop(tx); // Close channel to allow loop to exit
 
-    run_build_loop(rx, move || {
+    run_build_loop(rx, reload_tx, move || {
         let c = c.clone();
         async move {
             *c.lock().unwrap() += 1;
@@ -138,6 +139,7 @@ async fn single_trigger_causes_one_build() {
 #[tokio::test]
 async fn rapid_triggers_collapse_to_at_most_two_builds() {
     let (tx, rx) = mpsc::channel(8);
+    let (reload_tx, _reload_rx) = broadcast::channel::<()>(16);
     let count = std::sync::Arc::new(std::sync::Mutex::new(0u32));
     let c = count.clone();
 
@@ -147,7 +149,7 @@ async fn rapid_triggers_collapse_to_at_most_two_builds() {
     }
     drop(tx); // Close channel to allow loop to exit
 
-    run_build_loop(rx, move || {
+    run_build_loop(rx, reload_tx, move || {
         let c = c.clone();
         async move {
             *c.lock().unwrap() += 1;
@@ -166,6 +168,7 @@ async fn rapid_triggers_collapse_to_at_most_two_builds() {
 #[tokio::test]
 async fn build_failure_does_not_block_subsequent_builds() {
     let (tx, rx) = mpsc::channel(8);
+    let (reload_tx, _reload_rx) = broadcast::channel::<()>(16);
     let count = std::sync::Arc::new(std::sync::Mutex::new(0u32));
     let first = std::sync::Arc::new(std::sync::Mutex::new(true));
     let c = count.clone();
@@ -177,7 +180,7 @@ async fn build_failure_does_not_block_subsequent_builds() {
     }
     drop(tx); // Close channel to allow loop to exit
 
-    run_build_loop(rx, move || {
+    run_build_loop(rx, reload_tx, move || {
         let c = c.clone();
         let f = f.clone();
         async move {
@@ -203,12 +206,13 @@ async fn build_failure_does_not_block_subsequent_builds() {
 #[tokio::test]
 async fn closed_channel_exits_loop_cleanly() {
     let (tx, rx) = mpsc::channel::<()>(8);
+    let (reload_tx, _reload_rx) = broadcast::channel::<()>(16);
     let count = std::sync::Arc::new(std::sync::Mutex::new(0u32));
     let c = count.clone();
 
     drop(tx); // Close immediately without sending
 
-    run_build_loop(rx, move || {
+    run_build_loop(rx, reload_tx, move || {
         let c = c.clone();
         async move {
             *c.lock().unwrap() += 1;

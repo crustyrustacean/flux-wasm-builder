@@ -7,7 +7,7 @@
 //! into at most two builds (one running + one pending).
 
 use std::future::Future;
-use tokio::sync::mpsc::Receiver;
+use tokio::sync::{mpsc::Receiver, broadcast};
 
 use super::build::BuildError;
 
@@ -19,6 +19,7 @@ use super::build::BuildError;
 /// # Arguments
 ///
 /// * `build_rx` - Channel receiver for build trigger signals
+/// * `reload_tx` - Broadcast sender for signaling browser reloads
 /// * `build_fn` - Async function to execute for each build
 ///
 /// # Behavior
@@ -26,8 +27,9 @@ use super::build::BuildError;
 /// 1. Wait for a signal on `build_rx`
 /// 2. Drain any queued messages and set `pending` flag if any were drained
 /// 3. Execute `build_fn()`
-/// 4. If `pending` is true, immediately start another build
-/// 5. If `build_rx` is closed (sender dropped), exit the loop
+/// 4. On success, send reload signal via `reload_tx`
+/// 5. If `pending` is true, immediately start another build
+/// 6. If `build_rx` is closed (sender dropped), exit the loop
 ///
 /// # Error Handling
 ///
@@ -35,18 +37,30 @@ use super::build::BuildError;
 /// The server continues running and serving the last successful build.
 /// Only channel closure exits the loop.
 ///
+/// # Reload Signal
+///
+/// After a successful build, `reload_tx.send(())` is called.
+/// The `let _ =` idiom is used because `send` returns `Err` when there
+/// are no active subscribers (no browser tabs open), which is expected
+/// and must not be treated as an error.
+///
 /// # Example
 ///
 /// ```ignore
 /// let (tx, rx) = tokio::sync::mpsc::channel(8);
+/// let (reload_tx, _reload_rx) = tokio::sync::broadcast::channel(16);
 ///
 /// tokio::spawn(async move {
-///     run_build_loop(rx, || async {
+///     run_build_loop(rx, reload_tx, || async {
 ///         run_wasm_pack(&config).await
 ///     }).await;
 /// });
 /// ```
-pub async fn run_build_loop<F, Fut>(mut build_rx: Receiver<()>, build_fn: F)
+pub async fn run_build_loop<F, Fut>(
+    mut build_rx: Receiver<()>,
+    reload_tx: broadcast::Sender<()>,
+    build_fn: F,
+)
 where
     F: Fn() -> Fut + Send + 'static,
     Fut: Future<Output = Result<(), BuildError>> + Send,
@@ -83,6 +97,11 @@ where
         match result {
             Ok(()) => {
                 tracing::info!(parent: &span, "rebuild succeeded");
+                // Send reload signal to connected browsers.
+                // The `let _ =` is intentional: send returns Err when there
+                // are no active subscribers, which is expected when no browser
+                // tabs are open. This must not be treated as an error.
+                let _ = reload_tx.send(());
             }
             Err(ref e) => {
                 // Build failure is NOT fatal to the loop — continue watching
@@ -107,13 +126,14 @@ mod tests {
     #[tokio::test]
     async fn single_trigger_causes_one_build() {
         let (tx, rx) = mpsc::channel(8);
+        let (reload_tx, _reload_rx) = broadcast::channel::<()>(16);
         let count = Arc::new(Mutex::new(0u32));
         let c = count.clone();
 
         tx.send(()).await.unwrap();
         drop(tx); // Close channel to allow loop to exit
 
-        run_build_loop(rx, move || {
+        run_build_loop(rx, reload_tx, move || {
             let c = c.clone();
             async move {
                 *c.lock().unwrap() += 1;
@@ -128,6 +148,7 @@ mod tests {
     #[tokio::test]
     async fn rapid_triggers_collapse_to_at_most_two_builds() {
         let (tx, rx) = mpsc::channel(8);
+        let (reload_tx, _reload_rx) = broadcast::channel::<()>(16);
         let count = Arc::new(Mutex::new(0u32));
         let c = count.clone();
 
@@ -137,7 +158,7 @@ mod tests {
         }
         drop(tx); // Close channel to allow loop to exit
 
-        run_build_loop(rx, move || {
+        run_build_loop(rx, reload_tx, move || {
             let c = c.clone();
             async move {
                 *c.lock().unwrap() += 1;
@@ -156,6 +177,7 @@ mod tests {
     #[tokio::test]
     async fn build_failure_does_not_block_subsequent_builds() {
         let (tx, rx) = mpsc::channel(8);
+        let (reload_tx, _reload_rx) = broadcast::channel::<()>(16);
         let count = Arc::new(Mutex::new(0u32));
         let first = Arc::new(Mutex::new(true));
         let c = count.clone();
@@ -167,7 +189,7 @@ mod tests {
         }
         drop(tx); // Close channel to allow loop to exit
 
-        run_build_loop(rx, move || {
+        run_build_loop(rx, reload_tx, move || {
             let c = c.clone();
             let f = f.clone();
             async move {
@@ -193,12 +215,13 @@ mod tests {
     #[tokio::test]
     async fn closed_channel_exits_loop_cleanly() {
         let (tx, rx) = mpsc::channel::<()>(8);
+        let (reload_tx, _reload_rx) = broadcast::channel::<()>(16);
         let count = Arc::new(Mutex::new(0u32));
         let c = count.clone();
 
         drop(tx); // Close immediately without sending
 
-        run_build_loop(rx, move || {
+        run_build_loop(rx, reload_tx, move || {
             let c = c.clone();
             async move {
                 *c.lock().unwrap() += 1;
@@ -217,6 +240,7 @@ mod tests {
     #[tokio::test]
     async fn builds_run_sequentially_not_concurrently() {
         let (tx, rx) = mpsc::channel(8);
+        let (reload_tx, _reload_rx) = broadcast::channel::<()>(16);
         let concurrent_count = Arc::new(Mutex::new(0u32));
         let max_concurrent = Arc::new(Mutex::new(0u32));
         let cc = concurrent_count.clone();
@@ -228,7 +252,7 @@ mod tests {
         }
         drop(tx);
 
-        run_build_loop(rx, move || {
+        run_build_loop(rx, reload_tx, move || {
             let cc = cc.clone();
             let mc = mc.clone();
             async move {
@@ -267,6 +291,7 @@ mod tests {
     #[tokio::test]
     async fn pending_flag_triggers_immediate_rebuild() {
         let (tx, rx) = mpsc::channel(8);
+        let (reload_tx, _reload_rx) = broadcast::channel::<()>(16);
         let build_times = Arc::new(Mutex::new(Vec::new()));
         let bt = build_times.clone();
 
@@ -276,7 +301,7 @@ mod tests {
         tx.send(()).await.unwrap();
         drop(tx);
 
-        run_build_loop(rx, move || {
+        run_build_loop(rx, reload_tx, move || {
             let bt = bt.clone();
             async move {
                 bt.lock().unwrap().push(std::time::Instant::now());

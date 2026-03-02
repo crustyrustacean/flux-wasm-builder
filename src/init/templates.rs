@@ -44,6 +44,7 @@ edition.workspace = true
 [dependencies]
 actix-web = "4"
 actix-ws = "0.3"
+futures-util = "0.3"
 tokio = {{ version = "1", features = ["full"] }}
 serde_json = "1"
 mime_guess = "2"
@@ -84,13 +85,18 @@ pub fn backend_build_rs() -> &'static str {
 /// Backend main.rs
 pub fn backend_main_rs() -> &'static str {
     r#"use actix_web::{web, App, HttpServer};
+use tokio::sync::{broadcast, mpsc};
 use tracing_subscriber::{fmt, EnvFilter};
 
 mod build_subsystem;
 mod api;
 
 use build_subsystem::build::{BuildConfig, run_wasm_pack};
+use build_subsystem::build_coordinator::run_build_loop;
+use build_subsystem::watcher::start_watcher;
+use build_subsystem::reload::ws_reload_handler;
 use build_subsystem::static_assets::{serve_pkg_file, spa_fallback};
+use build_subsystem::DevMode;
 
 #[actix_web::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -107,13 +113,39 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         std::process::exit(1);
     }
 
+    // Create channels for build coordination
+    let (build_tx, build_rx) = mpsc::channel::<()>(8);
+    let (reload_tx, _reload_rx) = broadcast::channel::<()>(16);
+
+    // Start file watcher for frontend source changes
+    let _watcher = start_watcher(
+        &config.frontend_crate_path.join("src"),
+        config.watch_debounce_ms,
+        build_tx,
+    )?;
+    tracing::info!("file watcher started");
+
+    // Spawn build coordinator loop
+    let reload_tx_clone = reload_tx.clone();
+    let config_clone = config.clone();
+    tokio::spawn(async move {
+        run_build_loop(build_rx, reload_tx_clone, move || {
+            let config = config_clone.clone();
+            async move { run_wasm_pack(&config).await }
+        }).await;
+    });
+
     let server = HttpServer::new(move || {
         App::new()
             .app_data(web::Data::new(config.clone()))
+            .app_data(web::Data::new(DevMode(true)))
+            .app_data(web::Data::new(reload_tx.clone()))
             // API routes registered first
             .configure(api::configure)
             // Static asset routes
             .route("/pkg/{filename}", web::get().to(serve_pkg_file))
+            // WebSocket reload endpoint
+            .route("/ws/reload", web::get().to(ws_reload_handler))
             // SPA fallback - must be last
             .default_service(web::get().to(spa_fallback))
     })
@@ -155,16 +187,11 @@ pub mod watcher;
 pub mod reload;
 pub mod static_assets;
 
-pub use build::{BuildConfig, BuildError, run_wasm_pack};
-pub use build_coordinator::run_build_loop;
-pub use static_assets::{serve_pkg_file, spa_fallback};
-pub use watcher::{start_watcher, FileWatcher};
+/// Flag indicating development mode.
+/// When true, the reload script is injected into index.html.
+#[derive(Clone, Copy, Debug)]
+pub struct DevMode(pub bool);
 "#
-}
-
-/// Stub file for unimplemented modules
-pub fn stub_file() -> &'static str {
-    "// Implementation will be added in a future stage\n"
 }
 
 /// Backend build_subsystem/build.rs - wasm-pack invocation
@@ -573,7 +600,7 @@ pub fn start_watcher(
 /// Backend build_subsystem/build_coordinator.rs - build loop with coalescing
 pub fn backend_build_subsystem_build_coordinator_rs() -> &'static str {
     r#"use std::future::Future;
-use tokio::sync::mpsc::Receiver;
+use tokio::sync::{mpsc::Receiver, broadcast};
 
 use super::build::BuildError;
 
@@ -581,7 +608,12 @@ use super::build::BuildError;
 ///
 /// The loop waits for signals on `build_rx`, executes `build_fn`,
 /// and coalesces rapid triggers into at most two builds (one running, one pending).
-pub async fn run_build_loop<F, Fut>(mut build_rx: Receiver<()>, build_fn: F)
+/// After a successful build, sends a reload signal via `reload_tx`.
+pub async fn run_build_loop<F, Fut>(
+    mut build_rx: Receiver<()>,
+    reload_tx: broadcast::Sender<()>,
+    build_fn: F,
+)
 where
     F: Fn() -> Fut + Send + 'static,
     Fut: Future<Output = Result<(), BuildError>> + Send,
@@ -618,6 +650,11 @@ where
         match result {
             Ok(()) => {
                 tracing::info!(parent: &span, "rebuild succeeded");
+                // Send reload signal to connected browsers.
+                // The `let _ =` is intentional: send returns Err when there
+                // are no active subscribers, which is expected when no browser
+                // tabs are open. This must not be treated as an error.
+                let _ = reload_tx.send(());
             }
             Err(ref e) => {
                 tracing::warn!(parent: &span, error = %e, "rebuild failed — previous assets still served");
@@ -637,6 +674,8 @@ pub fn backend_build_subsystem_static_assets_rs() -> &'static str {
     r#"use actix_web::{web, HttpResponse, Responder};
 
 use super::build::BuildConfig;
+use super::reload::inject_reload_script;
+use super::DevMode;
 
 /// Serve a file from the pkg/ directory.
 ///
@@ -697,16 +736,32 @@ pub async fn serve_pkg_file(
 ///
 /// This enables client-side routing in the Yew frontend.
 /// Any route not matched by API or static asset handlers will receive index.html.
-pub async fn spa_fallback(config: web::Data<BuildConfig>) -> impl Responder {
+///
+/// In development mode (`DevMode(true)`), the reload script is injected
+/// into the HTML before serving to enable live reload.
+pub async fn spa_fallback(
+    config: web::Data<BuildConfig>,
+    dev_mode: web::Data<DevMode>,
+) -> impl Responder {
     let span = tracing::debug_span!("spa_fallback");
     let _enter = span.enter();
 
     match tokio::fs::read(&config.index_html_path).await {
         Ok(bytes) => {
             tracing::debug!(path = %config.index_html_path.display(), "serving index.html");
+            
+            let html = if dev_mode.0 {
+                // Dev mode: inject reload script
+                let html_str = String::from_utf8_lossy(&bytes);
+                inject_reload_script(&html_str).into_bytes()
+            } else {
+                // Release mode: serve as-is
+                bytes
+            };
+            
             HttpResponse::Ok()
                 .content_type("text/html; charset=utf-8")
-                .body(bytes)
+                .body(html)
         }
         Err(e) => {
             tracing::error!(
@@ -720,4 +775,101 @@ pub async fn spa_fallback(config: web::Data<BuildConfig>) -> impl Responder {
     }
 }
 "#
+}
+
+/// Backend build_subsystem/reload.rs - WebSocket live reload
+pub fn backend_build_subsystem_reload_rs() -> &'static str {
+    r##"use actix_web::{HttpRequest, HttpResponse, web};
+use actix_ws::Message;
+use futures_util::stream::StreamExt;
+use tokio::sync::broadcast;
+
+/// JavaScript that establishes a WebSocket connection for live reload.
+pub const RELOAD_SCRIPT: &str = r#"<script>
+(function() {
+  function connect() {
+    const ws = new WebSocket('ws://' + location.host + '/ws/reload');
+    ws.onmessage = () => location.reload();
+    ws.onclose = () => setTimeout(connect, 1000);
+  }
+  connect();
+})();
+</script>"#;
+
+/// Inject the reload script into HTML content.
+pub fn inject_reload_script(html: &str) -> String {
+    if let Some(pos) = html.rfind("</body>") {
+        let mut result = String::with_capacity(html.len() + RELOAD_SCRIPT.len());
+        result.push_str(&html[..pos]);
+        result.push_str(RELOAD_SCRIPT);
+        result.push_str(&html[pos..]);
+        result
+    } else {
+        let mut result = String::with_capacity(html.len() + RELOAD_SCRIPT.len());
+        result.push_str(html);
+        result.push_str(RELOAD_SCRIPT);
+        result
+    }
+}
+
+/// WebSocket handler for live reload signaling.
+pub async fn ws_reload_handler(
+    req: HttpRequest,
+    body: web::Payload,
+    reload_tx: web::Data<broadcast::Sender<()>>,
+) -> Result<HttpResponse, actix_web::Error> {
+    let peer = req.peer_addr()
+        .map(|a| a.to_string())
+        .unwrap_or_else(|| "unknown".into());
+
+    let span = tracing::debug_span!("ws_connection", peer = %peer);
+    let _enter = span.enter();
+    tracing::debug!("WebSocket connection established");
+
+    let mut reload_rx = reload_tx.subscribe();
+    let (response, mut session, mut msg_stream) = actix_ws::handle(&req, body)?;
+
+    actix_web::rt::spawn(async move {
+        loop {
+            tokio::select! {
+                result = reload_rx.recv() => {
+                    match result {
+                        Ok(()) => {
+                            tracing::debug!("sending reload signal to browser");
+                            if session.text("reload").await.is_err() {
+                                tracing::debug!("WebSocket send failed — client disconnected");
+                                break;
+                            }
+                        }
+                        Err(broadcast::error::RecvError::Lagged(n)) => {
+                            tracing::warn!(skipped = n, "WebSocket subscriber lagged — sending one reload");
+                            let _ = session.text("reload").await;
+                        }
+                        Err(broadcast::error::RecvError::Closed) => {
+                            tracing::debug!("broadcast channel closed — closing WebSocket");
+                            break;
+                        }
+                    }
+                }
+                msg = msg_stream.next() => {
+                    match msg {
+                        Some(Ok(Message::Close(reason))) => {
+                            tracing::debug!(?reason, "WebSocket client closed connection");
+                            let _ = session.close(reason).await;
+                            break;
+                        }
+                        None | Some(Err(_)) => {
+                            tracing::debug!("WebSocket stream ended");
+                            break;
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+    });
+
+    Ok(response)
+}
+"##
 }
