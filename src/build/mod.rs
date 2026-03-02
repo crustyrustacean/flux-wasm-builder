@@ -12,9 +12,15 @@
 //! - Typed error reporting
 //! - Static asset serving for pkg/ directory
 //! - SPA fallback for client-side routing
+//! - File watching for .rs source changes
+//! - Build coordination with coalescing
 
 mod build;
+mod build_coordinator;
 mod static_assets;
+mod watcher;
 
 pub use build::{BuildConfig, BuildError, run_wasm_pack, run_wasm_pack_with_env, run_command_with_timeout};
+pub use build_coordinator::run_build_loop;
 pub use static_assets::{serve_pkg_file, spa_fallback};
+pub use watcher::{start_watcher, FileWatcher};

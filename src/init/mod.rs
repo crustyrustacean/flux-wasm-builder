@@ -132,11 +132,11 @@ fn write_files(project_root: &Path, name: &str) -> Result<(), InitError> {
         ),
         (
             project_root.join("backend/src/build_subsystem/build_coordinator.rs"),
-            templates::stub_file().to_string(),
+            templates::backend_build_subsystem_build_coordinator_rs().to_string(),
         ),
         (
             project_root.join("backend/src/build_subsystem/watcher.rs"),
-            templates::stub_file().to_string(),
+            templates::backend_build_subsystem_watcher_rs().to_string(),
         ),
         (
             project_root.join("backend/src/build_subsystem/reload.rs"),
