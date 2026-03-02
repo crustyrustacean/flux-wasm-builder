@@ -144,7 +144,7 @@ fn write_files(project_root: &Path, name: &str) -> Result<(), InitError> {
         ),
         (
             project_root.join("backend/src/build_subsystem/static_assets.rs"),
-            templates::stub_file().to_string(),
+            templates::backend_build_subsystem_static_assets_rs().to_string(),
         ),
         (
             project_root.join("backend/src/api/mod.rs"),
