@@ -146,7 +146,6 @@ BuildConfig {
     pkg_output_path: PathBuf,
     index_html_path: PathBuf,
     watch_debounce_ms: u64,      // default: 300
-    reload_ws_path: String,      // default: "/ws/reload"
     port: u16,                   // default: 8080
     build_timeout_secs: u64,     // default: 300
 }

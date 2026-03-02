@@ -34,7 +34,6 @@ pub struct BuildConfig {
     pub pkg_output_path: PathBuf,
     pub index_html_path: PathBuf,
     pub watch_debounce_ms: u64,
-    pub reload_ws_path: String,
     pub port: u16,
     pub build_timeout_secs: u64,
 }

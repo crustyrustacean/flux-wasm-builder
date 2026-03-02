@@ -138,9 +138,6 @@ pub struct BuildConfig {
     /// Watch debounce in milliseconds (default: 300)
     pub watch_debounce_ms: u64,
     
-    /// WebSocket path for reload (default: "/ws/reload")
-    pub reload_ws_path: String,
-    
     /// Server port (default: 8080)
     pub port: u16,
     

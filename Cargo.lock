@@ -612,7 +612,7 @@ dependencies = [
 
 [[package]]
 name = "flux-wasm-builder"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "actix-rt",
  "actix-web",

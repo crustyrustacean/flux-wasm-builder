@@ -14,7 +14,6 @@ let config = BuildConfig {
     pkg_output_path: PathBuf::from("../frontend/pkg"),
     index_html_path: PathBuf::from("../frontend/index.html"),
     watch_debounce_ms: 300,
-    reload_ws_path: "/ws/reload".to_string(),
     port: 8080,
     build_timeout_secs: 300,
 };
@@ -28,7 +27,6 @@ let config = BuildConfig {
 | `pkg_output_path` | `PathBuf` | `{frontend_crate_path}/pkg` | wasm-pack output directory |
 | `index_html_path` | `PathBuf` | `{frontend_crate_path}/index.html` | Path to index.html |
 | `watch_debounce_ms` | `u64` | `300` | File change debounce interval |
-| `reload_ws_path` | `String` | `"/ws/reload"` | WebSocket endpoint path |
 | `port` | `u16` | `8080` | Server port |
 | `build_timeout_secs` | `u64` | `300` | wasm-pack timeout in seconds |
 
@@ -152,16 +150,7 @@ If a build exceeds the timeout:
 
 ## WebSocket Path
 
-The WebSocket endpoint for live reload:
-
-```rust
-let config = BuildConfig {
-    reload_ws_path: "/livereload".to_string(),
-    ..BuildConfig::new("../frontend")
-};
-```
-
-**Note:** If you change this, also update the injected script in `reload.rs`.
+The WebSocket endpoint for live reload is fixed at `/ws/reload`. This endpoint is automatically configured in development mode and the reload script is injected into `index.html` automatically.
 
 ## Logging Configuration
 

@@ -5,6 +5,16 @@ All notable changes to flux-wasm-builder are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.2] - 2026-03-02
+
+### Fixed
+
+- Removed unused re-exports from scaffolded backend's `build_subsystem/mod.rs`
+- Removed unused `reload_ws_path` field from `BuildConfig` in scaffolded projects
+- Added `#[allow(dead_code)]` to `run_command_with_timeout` utility function
+- Fixed clippy `single_match` and `redundant_closure` lints in build coordinator template
+- Scaffolded backend now compiles without clippy warnings
+
 ## [0.6.0] - 2026-03-02
 
 ### Added
@@ -98,6 +108,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Description |
 |---------|------|-------------|
+| 0.7.2 | 2026-03-02 | Clippy lint fixes for scaffolded backend |
 | 0.6.0 | 2026-03-02 | Complete implementation, documentation |
 | 0.5.0 | 2026-03-01 | Shared types crate |
 | 0.4.0 | 2026-02-28 | Static asset serving |

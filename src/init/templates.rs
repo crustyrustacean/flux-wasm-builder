@@ -245,14 +245,6 @@ pub mod static_assets;
 #[cfg(not(feature = "embed-assets"))]
 pub mod reload;
 
-pub use build::{BuildConfig, BuildError, run_wasm_pack};
-pub use build_coordinator::run_build_loop;
-pub use static_assets::{serve_pkg_file, spa_fallback};
-pub use watcher::{start_watcher, FileWatcher};
-
-#[cfg(not(feature = "embed-assets"))]
-pub use reload::{inject_reload_script, ws_reload_handler, RELOAD_SCRIPT};
-
 /// Flag indicating development mode.
 /// When true, the reload script is injected into index.html.
 #[derive(Clone, Copy, Debug)]
@@ -303,8 +295,6 @@ pub struct BuildConfig {
     pub index_html_path: PathBuf,
     /// Watch debounce interval in milliseconds (default: 300)
     pub watch_debounce_ms: u64,
-    /// WebSocket path for reload signaling (default: "/ws/reload")
-    pub reload_ws_path: String,
     /// Server port (default: 8080)
     pub port: u16,
     /// Build timeout in seconds (default: 300)
@@ -320,7 +310,6 @@ impl BuildConfig {
             pkg_output_path: frontend_crate_path.join("pkg"),
             index_html_path: frontend_crate_path.join("index.html"),
             watch_debounce_ms: 300,
-            reload_ws_path: "/ws/reload".to_string(),
             port: 8080,
             build_timeout_secs: 300,
             frontend_crate_path,
@@ -403,7 +392,8 @@ pub async fn run_wasm_pack_with_env(
 /// Testable primitive for timeout behavior.
 ///
 /// This function allows testing timeout behavior with any command,
-/// not just wasm-pack.
+/// not just wasm-pack. Provided as a utility for extension/testing.
+#[allow(dead_code)]
 pub async fn run_command_with_timeout(
     mut cmd: Command,
     timeout: Duration,
@@ -762,14 +752,9 @@ where
     
     loop {
         // If not pending, wait for a trigger
-        if !pending {
-            match build_rx.recv().await {
-                None => {
-                    tracing::debug!("build channel closed — coordinator exiting");
-                    return;
-                }
-                Some(()) => {}
-            }
+        if !pending && build_rx.recv().await.is_none() {
+            tracing::debug!("build channel closed — coordinator exiting");
+            return;
         }
         
         // Reset pending flag - we're now processing this build
@@ -785,7 +770,7 @@ where
 
         // Execute build
         let span = tracing::info_span!("rebuild_cycle");
-        let result = span.in_scope(|| build_fn()).await;
+        let result = span.in_scope(&build_fn).await;
 
         match result {
             Ok(()) => {

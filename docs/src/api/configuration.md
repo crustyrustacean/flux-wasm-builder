@@ -19,9 +19,6 @@ pub struct BuildConfig {
     /// Watch debounce interval in milliseconds (default: 300)
     pub watch_debounce_ms: u64,
     
-    /// WebSocket path for reload signaling (default: "/ws/reload")
-    pub reload_ws_path: String,
-    
     /// Server port (default: 8080)
     pub port: u16,
     
@@ -42,7 +39,6 @@ This sets:
 - `pkg_output_path` = `../frontend/pkg`
 - `index_html_path` = `../frontend/index.html`
 - `watch_debounce_ms` = `300`
-- `reload_ws_path` = `"/ws/reload"`
 - `port` = `8080`
 - `build_timeout_secs` = `300`
 
@@ -135,22 +131,6 @@ let config = BuildConfig {
     ..BuildConfig::new("../frontend")
 };
 ```
-
-### reload_ws_path
-
-**Type:** `String`
-**Default:** `"/ws/reload"`
-
-WebSocket endpoint path for live reload. Must match the path in the injected script.
-
-```rust
-let config = BuildConfig {
-    reload_ws_path: "/livereload".to_string(),
-    ..BuildConfig::new("../frontend")
-};
-```
-
-**Note:** If you change this, also update `RELOAD_SCRIPT` in `reload.rs`.
 
 ### port
 
