@@ -126,6 +126,30 @@ pub async fn ws_reload_handler(
 
     let span = tracing::debug_span!("ws_connection", peer = %peer);
     let _enter = span.enter();
+
+    // Origin validation for CSRF protection
+    // Reject cross-origin WebSocket connections to prevent
+    // malicious websites from connecting to the dev server
+    if let Some(origin) = req.headers().get("origin") {
+        // Get host as an owned String to avoid lifetime issues
+        let host = req.connection_info().host().to_string();
+        // Allow connections from the same host (development scenario)
+        let expected_origin = format!("http://{}", host);
+        let expected_origin_https = format!("https://{}", host);
+        
+        // Convert HeaderValue to string for comparison
+        let origin_str = origin.to_str().unwrap_or("");
+        
+        if origin_str != expected_origin && origin_str != expected_origin_https {
+            tracing::warn!(
+                origin = %origin_str,
+                expected = %expected_origin,
+                "WebSocket connection rejected - origin mismatch"
+            );
+            return Err(actix_web::error::ErrorForbidden("Invalid origin"));
+        }
+    }
+
     tracing::debug!("WebSocket connection established");
 
     let mut reload_rx = reload_tx.subscribe();

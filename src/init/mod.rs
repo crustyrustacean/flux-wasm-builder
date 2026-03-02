@@ -8,6 +8,7 @@ use std::path::Path;
 use crate::env_check::{
     wasm32_target_installed, wasm_pack_on_path, wasm_pack_version_ok, EnvCheckError,
 };
+use crate::validation::validate_project_name;
 
 /// Error type for project scaffolding failures.
 #[derive(Debug, thiserror::Error)]
@@ -17,6 +18,9 @@ pub enum InitError {
 
     #[error("environment check failed: {0}")]
     EnvCheck(#[from] EnvCheckError),
+
+    #[error("invalid project name: {0}")]
+    InvalidName(#[from] crate::validation::ValidationError),
 
     #[error("failed to create directory '{path}': {source}")]
     CreateDir {
@@ -39,12 +43,17 @@ pub enum InitError {
 /// # Errors
 ///
 /// Returns `InitError` if:
+/// - The project name is invalid (empty, too long, invalid characters, reserved word)
 /// - Environment checks fail (wasm-pack not found, wrong version, missing target)
 /// - The target directory already exists
 /// - Directory or file creation fails
 pub fn scaffold(root: &Path, name: &str) -> Result<(), InitError> {
     let span = tracing::info_span!("scaffold", project = name);
     let _enter = span.enter();
+
+    // Step 0: Validate project name
+    tracing::debug!("validating project name");
+    validate_project_name(name)?;
 
     // Step 1: Environment check
     tracing::info!("running environment checks");
@@ -367,5 +376,56 @@ mod tests {
             std::fs::read_to_string(root.path().join("my-app/frontend/src/lib.rs")).unwrap();
         assert!(contents.contains("StatusResponse"));
         assert!(contents.contains("/api/status"));
+    }
+
+    #[test]
+    fn fails_if_project_name_is_empty() {
+        let root = tempdir().unwrap();
+        let result = scaffold(root.path(), "");
+        assert!(matches!(result, Err(InitError::InvalidName(_))));
+    }
+
+    #[test]
+    fn fails_if_project_name_has_invalid_characters() {
+        let root = tempdir().unwrap();
+        let result = scaffold(root.path(), "test app");
+        assert!(matches!(result, Err(InitError::InvalidName(_))));
+
+        let result = scaffold(root.path(), "test\"app");
+        assert!(matches!(result, Err(InitError::InvalidName(_))));
+
+        let result = scaffold(root.path(), "test/app");
+        assert!(matches!(result, Err(InitError::InvalidName(_))));
+    }
+
+    #[test]
+    fn fails_if_project_name_is_reserved_word() {
+        let root = tempdir().unwrap();
+        let result = scaffold(root.path(), "test");
+        assert!(matches!(result, Err(InitError::InvalidName(_))));
+
+        let result = scaffold(root.path(), "build");
+        assert!(matches!(result, Err(InitError::InvalidName(_))));
+
+        let result = scaffold(root.path(), "fn");
+        assert!(matches!(result, Err(InitError::InvalidName(_))));
+    }
+
+    #[test]
+    fn fails_if_project_name_starts_with_invalid_char() {
+        let root = tempdir().unwrap();
+        let result = scaffold(root.path(), "-test");
+        assert!(matches!(result, Err(InitError::InvalidName(_))));
+
+        let result = scaffold(root.path(), "_test");
+        assert!(matches!(result, Err(InitError::InvalidName(_))));
+    }
+
+    #[test]
+    fn fails_if_project_name_too_long() {
+        let root = tempdir().unwrap();
+        let long_name = "a".repeat(65);
+        let result = scaffold(root.path(), &long_name);
+        assert!(matches!(result, Err(InitError::InvalidName(_))));
     }
 }

@@ -4,6 +4,7 @@
 pub mod build;
 pub mod env_check;
 pub mod init;
+pub mod validation;
 
 // Re-exports for convenience
 pub use build::{
@@ -18,3 +19,4 @@ pub use build::{inject_reload_script, ws_reload_handler, RELOAD_SCRIPT};
 
 pub use env_check::EnvCheckError;
 pub use init::{scaffold, InitError};
+pub use validation::ValidationError;
