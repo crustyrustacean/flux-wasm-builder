@@ -15,18 +15,30 @@
 //! - File watching for .rs source changes
 //! - Build coordination with coalescing
 //! - WebSocket-based live reload for development
+//!
+//! # Feature Flags
+//!
+//! - `embed-assets`: Embeds frontend assets into the binary at compile time.
+//!   When this feature is active, the reload module and file watcher are
+//!   compiled out, and assets are served from embedded data.
 
 mod build;
 mod build_coordinator;
-mod reload;
 mod static_assets;
 mod watcher;
 
+// Reload module is only needed in dev mode (not embed-assets)
+#[cfg(not(feature = "embed-assets"))]
+mod reload;
+
 pub use build::{BuildConfig, BuildError, run_wasm_pack, run_wasm_pack_with_env, run_command_with_timeout};
 pub use build_coordinator::run_build_loop;
-pub use reload::{inject_reload_script, ws_reload_handler, RELOAD_SCRIPT};
 pub use static_assets::{serve_pkg_file, spa_fallback};
 pub use watcher::{start_watcher, FileWatcher};
+
+// Only export reload functionality in dev mode
+#[cfg(not(feature = "embed-assets"))]
+pub use reload::{inject_reload_script, ws_reload_handler, RELOAD_SCRIPT};
 
 /// Flag indicating whether the server is running in development mode.
 ///

@@ -220,8 +220,22 @@ mod tests {
 
     #[tokio::test]
     async fn returns_timeout_error_when_process_hangs() {
-        let mut cmd = Command::new("sleep");
-        cmd.arg("60");
+        // Use a cross-platform long-running command
+        // On Windows: timeout command waits for keypress, use ping instead
+        // On Unix: sleep is available
+        #[cfg(windows)]
+        let cmd = {
+            let mut c = Command::new("ping");
+            c.args(["-n", "60", "127.0.0.1"]);
+            c
+        };
+        #[cfg(not(windows))]
+        let cmd = {
+            let mut c = Command::new("sleep");
+            c.arg("60");
+            c
+        };
+        
         let result = run_command_with_timeout(
             cmd,
             Duration::from_millis(100)
@@ -231,8 +245,22 @@ mod tests {
 
     #[tokio::test]
     async fn returns_success_for_fast_command() {
-        let mut cmd = Command::new("echo");
-        cmd.arg("test");
+        // Use a cross-platform fast command
+        // On Windows: cmd /c echo
+        // On Unix: echo
+        #[cfg(windows)]
+        let cmd = {
+            let mut c = Command::new("cmd");
+            c.args(["/c", "echo", "test"]);
+            c
+        };
+        #[cfg(not(windows))]
+        let cmd = {
+            let mut c = Command::new("echo");
+            c.arg("test");
+            c
+        };
+        
         let result = run_command_with_timeout(
             cmd,
             Duration::from_secs(5)
@@ -242,7 +270,21 @@ mod tests {
 
     #[tokio::test]
     async fn returns_error_for_failing_command() {
-        let cmd = Command::new("false");
+        // Use a cross-platform failing command
+        // On Windows: cmd /c exit 1
+        // On Unix: false
+        #[cfg(windows)]
+        let cmd = {
+            let mut c = Command::new("cmd");
+            c.args(["/c", "exit", "1"]);
+            c
+        };
+        #[cfg(not(windows))]
+        let cmd = {
+            let mut c = Command::new("false");
+            c
+        };
+        
         let result = run_command_with_timeout(
             cmd,
             Duration::from_secs(5)

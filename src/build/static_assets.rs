@@ -8,12 +8,27 @@
 //!
 //! In development mode, the SPA fallback injects a reload script
 //! that establishes a WebSocket connection for live reload.
+//!
+//! In release mode (with `embed-assets` feature), assets are embedded
+//! directly into the binary at compile time using `include_dir`.
 
 use actix_web::{web, HttpResponse, Responder};
 
 use super::build::BuildConfig;
-use super::reload::inject_reload_script;
 use super::DevMode;
+
+// Dev-mode only import for reload script injection
+#[cfg(not(feature = "embed-assets"))]
+use super::reload::inject_reload_script;
+
+// Embedded assets for release mode
+#[cfg(feature = "embed-assets")]
+static EMBEDDED_PKG: include_dir::Dir =
+    include_dir::include_dir!("$CARGO_MANIFEST_DIR/../frontend/pkg");
+
+#[cfg(feature = "embed-assets")]
+static EMBEDDED_INDEX: &[u8] =
+    include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/../frontend/index.html"));
 
 /// Serve a file from the pkg/ directory.
 ///
@@ -24,6 +39,10 @@ use super::DevMode;
 /// # MIME Types
 /// Uses `mime_guess` for automatic MIME type detection.
 /// `.wasm` files are served with `application/wasm`.
+///
+/// # Dev Mode
+/// Reads files from the filesystem at runtime.
+#[cfg(not(feature = "embed-assets"))]
 pub async fn serve_pkg_file(
     path: web::Path<String>,
     config: web::Data<BuildConfig>,
@@ -70,6 +89,55 @@ pub async fn serve_pkg_file(
     }
 }
 
+/// Serve a file from the embedded pkg/ directory.
+///
+/// # Security
+/// Uses `file_name()` to extract only the final path component,
+/// preventing path traversal attacks like `/pkg/../../etc/passwd`.
+///
+/// # MIME Types
+/// Uses `mime_guess` for automatic MIME type detection.
+/// `.wasm` files are served with `application/wasm`.
+///
+/// # Release Mode
+/// Assets are embedded at compile time; no filesystem access.
+#[cfg(feature = "embed-assets")]
+pub async fn serve_pkg_file(
+    path: web::Path<String>,
+    _config: web::Data<BuildConfig>,
+) -> impl Responder {
+    let filename = path.into_inner();
+
+    // Path traversal guard - extract only the final component
+    let safe_name = match std::path::Path::new(&filename).file_name() {
+        Some(n) => n.to_owned(),
+        None => {
+            tracing::warn!(filename = %filename, "path traversal attempt blocked");
+            return HttpResponse::BadRequest().body("invalid filename");
+        }
+    };
+
+    // Search for file in embedded directory
+    match EMBEDDED_PKG.get_file(&safe_name) {
+        Some(file) => {
+            let bytes = file.contents();
+            let mime = mime_guess::from_path(&safe_name).first_or_octet_stream();
+            tracing::debug!(
+                bytes = bytes.len(),
+                mime = %mime,
+                "serving embedded asset"
+            );
+            HttpResponse::Ok()
+                .content_type(mime.to_string())
+                .body(bytes.to_vec())
+        }
+        None => {
+            tracing::debug!(filename = %safe_name.to_string_lossy(), "embedded asset not found");
+            HttpResponse::NotFound().finish()
+        }
+    }
+}
+
 /// SPA fallback handler - serves index.html for all unmatched routes.
 ///
 /// This enables client-side routing in the Yew frontend.
@@ -77,6 +145,10 @@ pub async fn serve_pkg_file(
 ///
 /// In development mode (`DevMode(true)`), the reload script is injected
 /// into the HTML before serving to enable live reload.
+///
+/// # Dev Mode
+/// Reads index.html from the filesystem and injects reload script.
+#[cfg(not(feature = "embed-assets"))]
 pub async fn spa_fallback(
     config: web::Data<BuildConfig>,
     dev_mode: web::Data<DevMode>,
@@ -111,6 +183,23 @@ pub async fn spa_fallback(
                 .body("internal error: could not read index.html")
         }
     }
+}
+
+/// SPA fallback handler - serves embedded index.html.
+///
+/// # Release Mode
+/// Serves the index.html that was embedded at compile time.
+/// No reload script is injected.
+#[cfg(feature = "embed-assets")]
+pub async fn spa_fallback(
+    _config: web::Data<BuildConfig>,
+    _dev_mode: web::Data<DevMode>,
+) -> impl Responder {
+    tracing::debug!("serving embedded index.html");
+    
+    HttpResponse::Ok()
+        .content_type("text/html; charset=utf-8")
+        .body(EMBEDDED_INDEX.to_vec())
 }
 
 #[cfg(test)]
@@ -303,6 +392,48 @@ mod tests {
         assert!(
             !std::str::from_utf8(&body).unwrap().contains("/ws/reload"),
             "index.html should not contain reload script in release mode"
+        );
+    }
+}
+
+// Feature-gated tests for embedded assets
+// These tests only run when the `embed-assets` feature is active
+// and require frontend/pkg/ and frontend/index.html to exist
+#[cfg(all(test, feature = "embed-assets"))]
+mod embed_tests {
+    use super::*;
+
+    #[test]
+    fn embedded_pkg_is_non_empty() {
+        assert!(
+            EMBEDDED_PKG.entries().count() > 0,
+            "embedded pkg/ should contain at least one file"
+        );
+    }
+
+    #[test]
+    fn embedded_pkg_contains_wasm_file() {
+        let has_wasm = EMBEDDED_PKG.entries().any(|e| {
+            e.path()
+                .extension()
+                .map(|ext| ext == "wasm")
+                .unwrap_or(false)
+        });
+        assert!(has_wasm, "no .wasm file found in embedded pkg/");
+    }
+
+    #[test]
+    fn embedded_index_is_non_empty() {
+        assert!(!EMBEDDED_INDEX.is_empty(), "embedded index.html should not be empty");
+    }
+
+    #[test]
+    fn embedded_index_does_not_contain_reload_script() {
+        let html = std::str::from_utf8(EMBEDDED_INDEX)
+            .expect("embedded index.html should be valid UTF-8");
+        assert!(
+            !html.contains("/ws/reload"),
+            "embedded index.html should not contain reload script reference"
         );
     }
 }

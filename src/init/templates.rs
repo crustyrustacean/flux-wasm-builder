@@ -85,68 +85,123 @@ pub fn backend_build_rs() -> &'static str {
 /// Backend main.rs
 pub fn backend_main_rs() -> &'static str {
     r#"use actix_web::{web, App, HttpServer};
-use tokio::sync::{broadcast, mpsc};
 use tracing_subscriber::{fmt, EnvFilter};
 
 mod build_subsystem;
 mod api;
 
 use build_subsystem::build::{BuildConfig, run_wasm_pack};
-use build_subsystem::build_coordinator::run_build_loop;
-use build_subsystem::watcher::start_watcher;
-use build_subsystem::reload::ws_reload_handler;
 use build_subsystem::static_assets::{serve_pkg_file, spa_fallback};
 use build_subsystem::DevMode;
+
+// Dev-mode only imports
+#[cfg(not(feature = "embed-assets"))]
+use build_subsystem::build_coordinator::run_build_loop;
+#[cfg(not(feature = "embed-assets"))]
+use build_subsystem::watcher::start_watcher;
+#[cfg(not(feature = "embed-assets"))]
+use build_subsystem::reload::ws_reload_handler;
+#[cfg(not(feature = "embed-assets"))]
+use tokio::sync::{broadcast, mpsc};
 
 #[actix_web::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     init_tracing();
 
-    // When running via cargo alias from workspace root, CWD is workspace root
     let config = BuildConfig::new("frontend");
     let port = config.port;
 
-    // Run initial frontend build before starting server
-    tracing::info!("running initial frontend build");
-    if let Err(e) = run_wasm_pack(&config).await {
-        eprintln!("error: initial build failed: {e}");
-        std::process::exit(1);
+    // Dev mode: run initial frontend build and start watcher
+    #[cfg(not(feature = "embed-assets"))]
+    {
+        tracing::info!("running initial frontend build");
+        if let Err(e) = run_wasm_pack(&config).await {
+            eprintln!("error: initial build failed: {e}");
+            std::process::exit(1);
+        }
+
+        let (build_tx, build_rx) = mpsc::channel::<()>(8);
+        let (reload_tx, _reload_rx) = broadcast::channel::<()>(16);
+
+        let _watcher = start_watcher(
+            &config.frontend_crate_path.join("src"),
+            config.watch_debounce_ms,
+            build_tx,
+        )?;
+        tracing::info!("file watcher started");
+
+        let reload_tx_clone = reload_tx.clone();
+        let config_clone = config.clone();
+        tokio::spawn(async move {
+            run_build_loop(build_rx, reload_tx_clone, move || {
+                let config = config_clone.clone();
+                async move { run_wasm_pack(&config).await }
+            }).await;
+        });
+
+        run_server(config, port, Some(reload_tx)).await?;
     }
 
-    // Create channels for build coordination
-    let (build_tx, build_rx) = mpsc::channel::<()>(8);
-    let (reload_tx, _reload_rx) = broadcast::channel::<()>(16);
+    // Release mode: just start the server with embedded assets
+    #[cfg(feature = "embed-assets")]
+    {
+        run_server(config, port, None).await?;
+    }
 
-    // Start file watcher for frontend source changes
-    let _watcher = start_watcher(
-        &config.frontend_crate_path.join("src"),
-        config.watch_debounce_ms,
-        build_tx,
-    )?;
-    tracing::info!("file watcher started");
+    Ok(())
+}
 
-    // Spawn build coordinator loop
-    let reload_tx_clone = reload_tx.clone();
-    let config_clone = config.clone();
-    tokio::spawn(async move {
-        run_build_loop(build_rx, reload_tx_clone, move || {
-            let config = config_clone.clone();
-            async move { run_wasm_pack(&config).await }
-        }).await;
-    });
+#[cfg(not(feature = "embed-assets"))]
+async fn run_server(
+    config: BuildConfig,
+    port: u16,
+    reload_tx: Option<broadcast::Sender<()>>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let server = HttpServer::new(move || {
+        let mut app = App::new()
+            .app_data(web::Data::new(config.clone()))
+            .app_data(web::Data::new(DevMode(true)))
+            .configure(api::configure)
+            .route("/pkg/{filename}", web::get().to(serve_pkg_file));
 
+        // Dev-mode only: WebSocket reload endpoint
+        if let Some(tx) = reload_tx.as_ref() {
+            app = app
+                .app_data(web::Data::new(tx.clone()))
+                .route("/ws/reload", web::get().to(ws_reload_handler));
+        }
+
+        app.default_service(web::get().to(spa_fallback))
+    })
+    .bind(("127.0.0.1", port));
+
+    match server {
+        Ok(s) => {
+            tracing::info!(port, "server listening");
+            s.run().await?;
+        }
+        Err(e) if e.kind() == std::io::ErrorKind::AddrInUse => {
+            eprintln!("error: port {port} is already in use. Change the port in BuildConfig.");
+            std::process::exit(1);
+        }
+        Err(e) => return Err(e.into()),
+    }
+
+    Ok(())
+}
+
+#[cfg(feature = "embed-assets")]
+async fn run_server(
+    config: BuildConfig,
+    port: u16,
+    _reload_tx: Option<()>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let server = HttpServer::new(move || {
         App::new()
             .app_data(web::Data::new(config.clone()))
-            .app_data(web::Data::new(DevMode(true)))
-            .app_data(web::Data::new(reload_tx.clone()))
-            // API routes registered first
+            .app_data(web::Data::new(DevMode(false)))
             .configure(api::configure)
-            // Static asset routes
             .route("/pkg/{filename}", web::get().to(serve_pkg_file))
-            // WebSocket reload endpoint
-            .route("/ws/reload", web::get().to(ws_reload_handler))
-            // SPA fallback - must be last
             .default_service(web::get().to(spa_fallback))
     })
     .bind(("127.0.0.1", port));
@@ -184,8 +239,19 @@ pub fn backend_build_subsystem_mod() -> &'static str {
     r#"pub mod build;
 pub mod build_coordinator;
 pub mod watcher;
-pub mod reload;
 pub mod static_assets;
+
+// Dev-mode only module
+#[cfg(not(feature = "embed-assets"))]
+pub mod reload;
+
+pub use build::{BuildConfig, BuildError, run_wasm_pack};
+pub use build_coordinator::run_build_loop;
+pub use static_assets::{serve_pkg_file, spa_fallback};
+pub use watcher::{start_watcher, FileWatcher};
+
+#[cfg(not(feature = "embed-assets"))]
+pub use reload::{inject_reload_script, ws_reload_handler, RELOAD_SCRIPT};
 
 /// Flag indicating development mode.
 /// When true, the reload script is injected into index.html.
@@ -671,11 +737,23 @@ where
 
 /// Backend build_subsystem/static_assets.rs - asset serving handlers
 pub fn backend_build_subsystem_static_assets_rs() -> &'static str {
-    r#"use actix_web::{web, HttpResponse, Responder};
+    r##"use actix_web::{web, HttpResponse, Responder};
 
 use super::build::BuildConfig;
-use super::reload::inject_reload_script;
 use super::DevMode;
+
+// Dev-mode only import for reload script injection
+#[cfg(not(feature = "embed-assets"))]
+use super::reload::inject_reload_script;
+
+// Embedded assets for release mode
+#[cfg(feature = "embed-assets")]
+static EMBEDDED_PKG: include_dir::Dir = 
+    include_dir::include_dir!("$CARGO_MANIFEST_DIR/../frontend/pkg");
+
+#[cfg(feature = "embed-assets")]
+static EMBEDDED_INDEX: &[u8] = 
+    include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/../frontend/index.html"));
 
 /// Serve a file from the pkg/ directory.
 ///
@@ -686,6 +764,10 @@ use super::DevMode;
 /// # MIME Types
 /// Uses `mime_guess` for automatic MIME type detection.
 /// `.wasm` files are served with `application/wasm`.
+///
+/// # Dev Mode
+/// Reads files from the filesystem at runtime.
+#[cfg(not(feature = "embed-assets"))]
 pub async fn serve_pkg_file(
     path: web::Path<String>,
     config: web::Data<BuildConfig>,
@@ -693,7 +775,6 @@ pub async fn serve_pkg_file(
     let filename = path.into_inner();
 
     // Path traversal guard - extract only the final component
-    // This prevents `/pkg/../secret.txt` from escaping the pkg directory
     let safe_name = match std::path::Path::new(&filename).file_name() {
         Some(n) => n.to_owned(),
         None => {
@@ -708,54 +789,70 @@ pub async fn serve_pkg_file(
     match tokio::fs::read(&file_path).await {
         Ok(bytes) => {
             let mime = mime_guess::from_path(&safe_name).first_or_octet_stream();
-            tracing::debug!(
-                bytes = bytes.len(),
-                mime = %mime,
-                "serving asset"
-            );
             HttpResponse::Ok()
                 .content_type(mime.to_string())
                 .body(bytes)
         }
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-            tracing::debug!(path = %file_path.display(), "asset not found");
             HttpResponse::NotFound().finish()
         }
         Err(e) => {
-            tracing::error!(
-                error = %e,
-                path = %file_path.display(),
-                "failed to read asset"
-            );
+            tracing::error!(error = %e, path = %file_path.display(), "failed to read asset");
             HttpResponse::InternalServerError().finish()
         }
     }
 }
 
-/// SPA fallback handler - serves index.html for all unmatched routes.
+/// Serve a file from the embedded pkg/ directory.
 ///
-/// This enables client-side routing in the Yew frontend.
-/// Any route not matched by API or static asset handlers will receive index.html.
+/// # Security
+/// Uses `file_name()` to extract only the final path component,
+/// preventing path traversal attacks like `/pkg/../../etc/passwd`.
 ///
-/// In development mode (`DevMode(true)`), the reload script is injected
-/// into the HTML before serving to enable live reload.
+/// # Release Mode
+/// Assets are embedded at compile time; no filesystem access.
+#[cfg(feature = "embed-assets")]
+pub async fn serve_pkg_file(
+    path: web::Path<String>,
+    _config: web::Data<BuildConfig>,
+) -> impl Responder {
+    let filename = path.into_inner();
+
+    // Path traversal guard - extract only the final component
+    let safe_name = match std::path::Path::new(&filename).file_name() {
+        Some(n) => n.to_owned(),
+        None => {
+            tracing::warn!(filename = %filename, "path traversal attempt blocked");
+            return HttpResponse::BadRequest().body("invalid filename");
+        }
+    };
+
+    // Search for file in embedded directory
+    match EMBEDDED_PKG.get_file(&safe_name) {
+        Some(file) => {
+            let bytes = file.contents();
+            let mime = mime_guess::from_path(&safe_name).first_or_octet_stream();
+            HttpResponse::Ok()
+                .content_type(mime.to_string())
+                .body(bytes.to_vec())
+        }
+        None => HttpResponse::NotFound().finish()
+    }
+}
+
+/// SPA fallback - serves index.html.
+/// Dev mode: reads from filesystem and injects reload script.
+#[cfg(not(feature = "embed-assets"))]
 pub async fn spa_fallback(
     config: web::Data<BuildConfig>,
     dev_mode: web::Data<DevMode>,
 ) -> impl Responder {
-    let span = tracing::debug_span!("spa_fallback");
-    let _enter = span.enter();
-
     match tokio::fs::read(&config.index_html_path).await {
         Ok(bytes) => {
-            tracing::debug!(path = %config.index_html_path.display(), "serving index.html");
-            
             let html = if dev_mode.0 {
-                // Dev mode: inject reload script
                 let html_str = String::from_utf8_lossy(&bytes);
                 inject_reload_script(&html_str).into_bytes()
             } else {
-                // Release mode: serve as-is
                 bytes
             };
             
@@ -764,17 +861,25 @@ pub async fn spa_fallback(
                 .body(html)
         }
         Err(e) => {
-            tracing::error!(
-                error = %e,
-                path = %config.index_html_path.display(),
-                "failed to read index.html"
-            );
+            tracing::error!(error = %e, path = %config.index_html_path.display(), "failed to read index.html");
             HttpResponse::InternalServerError()
                 .body("internal error: could not read index.html")
         }
     }
 }
-"#
+
+/// SPA fallback - serves embedded index.html.
+/// Release mode: no reload script.
+#[cfg(feature = "embed-assets")]
+pub async fn spa_fallback(
+    _config: web::Data<BuildConfig>,
+    _dev_mode: web::Data<DevMode>,
+) -> impl Responder {
+    HttpResponse::Ok()
+        .content_type("text/html; charset=utf-8")
+        .body(EMBEDDED_INDEX.to_vec())
+}
+"##
 }
 
 /// Backend build_subsystem/reload.rs - WebSocket live reload
