@@ -1,0 +1,22 @@
+[package]
+name = "flux-wasm-builder"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "flux-wasm-builder"
+path = "src/bin/main.rs"
+
+[lib]
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+thiserror = "2.0.18"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[dev-dependencies]
+tempfile = "3"
+assert_cmd = "2"
+predicates = "3"
+tokio-test = "0.4"

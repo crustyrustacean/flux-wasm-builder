@@ -1,0 +1,4 @@
+# .gitignore configuration for flux-wasm-builder
+
+# build artifacts
+/target
