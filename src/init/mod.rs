@@ -1,7 +1,10 @@
+// src/init/mod.rs
+
+// module declarations
 mod templates;
 
+// dependencies
 use std::path::Path;
-
 use crate::env_check::{
     wasm32_target_installed, wasm_pack_on_path, wasm_pack_version_ok, EnvCheckError,
 };
@@ -125,7 +128,7 @@ fn write_files(project_root: &Path, name: &str) -> Result<(), InitError> {
         ),
         (
             project_root.join("backend/src/build_subsystem/build.rs"),
-            templates::stub_file().to_string(),
+            templates::backend_build_subsystem_build_rs().to_string(),
         ),
         (
             project_root.join("backend/src/build_subsystem/build_coordinator.rs"),
@@ -259,7 +262,7 @@ mod tests {
             std::fs::read_to_string(root.path().join("my-app/frontend/Cargo.toml")).unwrap();
         assert!(contents.contains("cdylib"));
         assert!(contents.contains("yew"));
-        assert!(contents.contains("0.21"));
+        assert!(contents.contains("0.22.1"));
     }
 
     #[test]

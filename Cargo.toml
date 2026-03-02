@@ -1,6 +1,6 @@
 [package]
 name = "flux-wasm-builder"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 [[bin]]
@@ -11,9 +11,11 @@ path = "src/bin/main.rs"
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
+tokio = { version = "1", features = ["process", "time", "rt", "rt-multi-thread", "macros"] }
 thiserror = "2.0.18"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
 
 [dev-dependencies]
 tempfile = "3"
