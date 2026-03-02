@@ -1,3 +1,0 @@
-[alias]
-backend = "run -p test-app-backend"
-start = "run -p test-app-backend"
