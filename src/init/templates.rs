@@ -430,8 +430,7 @@ pub fn backend_api_mod(name: &str) -> String {
     let crate_name = name.replace('-', "_");
     format!(
         r#"use actix_web::{{web, HttpResponse, Responder}};
-use serde_json::json;
-use {crate_name}_shared::HelloResponse;
+use {crate_name}_shared::{{HelloResponse, StatusResponse}};
 
 pub fn configure(cfg: &mut web::ServiceConfig) {{
     cfg.service(
@@ -448,10 +447,10 @@ async fn hello() -> impl Responder {{
 }}
 
 async fn status() -> impl Responder {{
-    HttpResponse::Ok().json(json!({{
-        "version": env!("CARGO_PKG_VERSION"),
-        "status": "ok"
-    }}))
+    HttpResponse::Ok().json(StatusResponse {{
+        version: env!("CARGO_PKG_VERSION").to_string(),
+        uptime_seconds: 0,
+    }})
 }}
 "#
     )
@@ -511,11 +510,12 @@ pub fn frontend_lib_rs(name: &str) -> String {
     format!(
         r#"use yew::prelude::*;
 use gloo_net::http::Request;
-use {crate_name}_shared::HelloResponse;
+use {crate_name}_shared::{{HelloResponse, StatusResponse}};
 
 #[component(App)]
 fn app() -> Html {{
     let message = use_state(|| None::<String>);
+    let version = use_state(|| None::<String>);
 
     {{
         let message = message.clone();
@@ -540,6 +540,29 @@ fn app() -> Html {{
         }});
     }}
 
+    {{
+        let version = version.clone();
+        use_effect_with((), move |_| {{
+            let version = version.clone();
+            wasm_bindgen_futures::spawn_local(async move {{
+                match Request::get("/api/status")
+                    .send()
+                    .await
+                {{
+                    Ok(response) => {{
+                        if let Ok(status) = response.json::<StatusResponse>().await {{
+                            version.set(Some(status.version));
+                        }}
+                    }}
+                    Err(e) => {{
+                        web_sys::console::log_1(&format!("Error: {{:?}}", e).into());
+                    }}
+                }}
+            }});
+            || ()
+        }});
+    }}
+
     html! {{
         <div>
             <h1>{{ "Flux WASM Builder" }}</h1>
@@ -548,6 +571,13 @@ fn app() -> Html {{
                     html! {{ <p>{{ msg }}</p> }}
                 }} else {{
                     html! {{ <p>{{ "Loading..." }}</p> }}
+                }}
+            }}
+            {{
+                if let Some(ver) = (*version).clone() {{
+                    html! {{ <p class="version">{{ format!("v{{}}", ver) }}</p> }}
+                }} else {{
+                    html! {{ <></> }}
                 }}
             }}
         </div>
@@ -574,13 +604,16 @@ edition.workspace = true
 
 [dependencies]
 serde = {{ version = "1", features = ["derive"] }}
+
+[dev-dependencies]
+serde_json = "1"
 "#
     )
 }
 
 /// Shared lib.rs
 pub fn shared_lib_rs() -> &'static str {
-    r#"use serde::{Deserialize, Serialize};
+    r##"use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HelloResponse {
@@ -592,7 +625,48 @@ pub struct StatusResponse {
     pub version: String,
     pub uptime_seconds: u64,
 }
-"#
+
+// Compile-time assertions: field renames or trait removals become
+// compile errors rather than runtime failures.
+const _: fn() = || {
+    fn assert_serialize<T: serde::Serialize>() {}
+    fn assert_deserialize<T: for<'de> serde::Deserialize<'de>>() {}
+    assert_serialize::<HelloResponse>();
+    assert_deserialize::<HelloResponse>();
+    assert_serialize::<StatusResponse>();
+    assert_deserialize::<StatusResponse>();
+};
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn hello_response_round_trips_through_json() {
+        let r = HelloResponse { message: "hi".into() };
+        let json = serde_json::to_string(&r).unwrap();
+        let r2: HelloResponse = serde_json::from_str(&json).unwrap();
+        assert_eq!(r2.message, "hi");
+    }
+
+    #[test]
+    fn status_response_round_trips_through_json() {
+        let r = StatusResponse { version: "0.1.0".into(), uptime_seconds: 42 };
+        let json = serde_json::to_string(&r).unwrap();
+        let r2: StatusResponse = serde_json::from_str(&json).unwrap();
+        assert_eq!(r2.version, "0.1.0");
+        assert_eq!(r2.uptime_seconds, 42);
+    }
+
+    #[test]
+    fn unknown_fields_are_ignored_not_rejected() {
+        // Verifies forward-compatibility: extra fields are silently ignored
+        let json = r#"{"message":"hi","future_field":true}"#;
+        let r: HelloResponse = serde_json::from_str(json).unwrap();
+        assert_eq!(r.message, "hi");
+    }
+}
+"##
 }
 
 /// Backend build_subsystem/watcher.rs - file watcher for .rs source changes

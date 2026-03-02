@@ -327,4 +327,45 @@ mod tests {
             std::fs::read_to_string(root.path().join("cool-project/backend/Cargo.toml")).unwrap();
         assert!(contents.contains("cool-project"));
     }
+
+    #[test]
+    fn shared_lib_has_compile_time_trait_assertions() {
+        let root = tempdir().unwrap();
+        scaffold(root.path(), "my-app").unwrap();
+        let contents =
+            std::fs::read_to_string(root.path().join("my-app/shared/src/lib.rs")).unwrap();
+        assert!(contents.contains("assert_serialize"));
+        assert!(contents.contains("assert_deserialize"));
+        assert!(contents.contains("const _: fn()"));
+    }
+
+    #[test]
+    fn shared_cargo_toml_has_serde_json_dev_dependency() {
+        let root = tempdir().unwrap();
+        scaffold(root.path(), "my-app").unwrap();
+        let contents =
+            std::fs::read_to_string(root.path().join("my-app/shared/Cargo.toml")).unwrap();
+        assert!(contents.contains("[dev-dependencies]"));
+        assert!(contents.contains("serde_json"));
+    }
+
+    #[test]
+    fn backend_api_uses_status_response_not_json_macro() {
+        let root = tempdir().unwrap();
+        scaffold(root.path(), "my-app").unwrap();
+        let contents =
+            std::fs::read_to_string(root.path().join("my-app/backend/src/api/mod.rs")).unwrap();
+        assert!(contents.contains("StatusResponse"));
+        assert!(!contents.contains("json!"), "should use StatusResponse struct, not json!()");
+    }
+
+    #[test]
+    fn frontend_imports_and_fetches_status_response() {
+        let root = tempdir().unwrap();
+        scaffold(root.path(), "my-app").unwrap();
+        let contents =
+            std::fs::read_to_string(root.path().join("my-app/frontend/src/lib.rs")).unwrap();
+        assert!(contents.contains("StatusResponse"));
+        assert!(contents.contains("/api/status"));
+    }
 }
