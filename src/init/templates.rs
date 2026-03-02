@@ -391,6 +391,7 @@ console_error_panic_hook = "0.1.7"
 
 /// Frontend index.html
 pub fn frontend_index_html(name: &str) -> String {
+    let js_name = name.replace('-', "_");
     format!(
         r#"<!DOCTYPE html>
 <html lang="en">
@@ -401,7 +402,7 @@ pub fn frontend_index_html(name: &str) -> String {
 </head>
 <body>
     <script type="module">
-        import init from './pkg/{name}_frontend.js';
+        import init from './pkg/{js_name}_frontend.js';
         init();
     </script>
 </body>
