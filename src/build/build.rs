@@ -281,7 +281,7 @@ mod tests {
         };
         #[cfg(not(windows))]
         let cmd = {
-            let mut c = Command::new("false");
+            let c = Command::new("false");
             c
         };
         
