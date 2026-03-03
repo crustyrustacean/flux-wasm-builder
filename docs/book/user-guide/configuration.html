@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-f4f20c9a.js";
+            window.path_to_searchindex_js = "../searchindex-93205104.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-52700a75.js"></script>
@@ -193,7 +193,6 @@ let config = BuildConfig {
     pkg_output_path: PathBuf::from("../frontend/pkg"),
     index_html_path: PathBuf::from("../frontend/index.html"),
     watch_debounce_ms: 300,
-    reload_ws_path: "/ws/reload".to_string(),
     port: 8080,
     build_timeout_secs: 300,
 };
@@ -209,7 +208,6 @@ let config = BuildConfig {
 <tr><td><code>pkg_output_path</code></td><td><code>PathBuf</code></td><td><code>{frontend_crate_path}/pkg</code></td><td>wasm-pack output directory</td></tr>
 <tr><td><code>index_html_path</code></td><td><code>PathBuf</code></td><td><code>{frontend_crate_path}/index.html</code></td><td>Path to index.html</td></tr>
 <tr><td><code>watch_debounce_ms</code></td><td><code>u64</code></td><td><code>300</code></td><td>File change debounce interval</td></tr>
-<tr><td><code>reload_ws_path</code></td><td><code>String</code></td><td><code>"/ws/reload"</code></td><td>WebSocket endpoint path</td></tr>
 <tr><td><code>port</code></td><td><code>u16</code></td><td><code>8080</code></td><td>Server port</td></tr>
 <tr><td><code>build_timeout_secs</code></td><td><code>u64</code></td><td><code>300</code></td><td>wasm-pack timeout in seconds</td></tr>
 </tbody>
@@ -312,15 +310,7 @@ let _watcher2 = start_watcher(
 <li>The server continues running with previous assets</li>
 </ol>
 <h2 id="websocket-path"><a class="header" href="#websocket-path">WebSocket Path</a></h2>
-<p>The WebSocket endpoint for live reload:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let config = BuildConfig {
-    reload_ws_path: "/livereload".to_string(),
-    ..BuildConfig::new("../frontend")
-};
-<span class="boring">}</span></code></pre>
-<p><strong>Note:</strong> If you change this, also update the injected script in <code>reload.rs</code>.</p>
+<p>The WebSocket endpoint for live reload is fixed at <code>/ws/reload</code>. This endpoint is automatically configured in development mode and the reload script is injected into <code>index.html</code> automatically.</p>
 <h2 id="logging-configuration"><a class="header" href="#logging-configuration">Logging Configuration</a></h2>
 <p>Logging uses <code>tracing-subscriber</code> with environment-based filtering:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]

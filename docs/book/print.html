@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-f4f20c9a.js";
+            window.path_to_searchindex_js = "searchindex-93205104.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-52700a75.js"></script>
@@ -813,7 +813,6 @@ let config = BuildConfig {
     pkg_output_path: PathBuf::from("../frontend/pkg"),
     index_html_path: PathBuf::from("../frontend/index.html"),
     watch_debounce_ms: 300,
-    reload_ws_path: "/ws/reload".to_string(),
     port: 8080,
     build_timeout_secs: 300,
 };
@@ -829,7 +828,6 @@ let config = BuildConfig {
 <tr><td><code>pkg_output_path</code></td><td><code>PathBuf</code></td><td><code>{frontend_crate_path}/pkg</code></td><td>wasm-pack output directory</td></tr>
 <tr><td><code>index_html_path</code></td><td><code>PathBuf</code></td><td><code>{frontend_crate_path}/index.html</code></td><td>Path to index.html</td></tr>
 <tr><td><code>watch_debounce_ms</code></td><td><code>u64</code></td><td><code>300</code></td><td>File change debounce interval</td></tr>
-<tr><td><code>reload_ws_path</code></td><td><code>String</code></td><td><code>"/ws/reload"</code></td><td>WebSocket endpoint path</td></tr>
 <tr><td><code>port</code></td><td><code>u16</code></td><td><code>8080</code></td><td>Server port</td></tr>
 <tr><td><code>build_timeout_secs</code></td><td><code>u64</code></td><td><code>300</code></td><td>wasm-pack timeout in seconds</td></tr>
 </tbody>
@@ -932,15 +930,7 @@ let _watcher2 = start_watcher(
 <li>The server continues running with previous assets</li>
 </ol>
 <h2 id="websocket-path"><a class="header" href="#websocket-path">WebSocket Path</a></h2>
-<p>The WebSocket endpoint for live reload:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let config = BuildConfig {
-    reload_ws_path: "/livereload".to_string(),
-    ..BuildConfig::new("../frontend")
-};
-<span class="boring">}</span></code></pre>
-<p><strong>Note:</strong> If you change this, also update the injected script in <code>reload.rs</code>.</p>
+<p>The WebSocket endpoint for live reload is fixed at <code>/ws/reload</code>. This endpoint is automatically configured in development mode and the reload script is injected into <code>index.html</code> automatically.</p>
 <h2 id="logging-configuration"><a class="header" href="#logging-configuration">Logging Configuration</a></h2>
 <p>Logging uses <code>tracing-subscriber</code> with environment-based filtering:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -1332,9 +1322,6 @@ while build_rx.try_recv().is_ok() {
     
     /// Watch debounce in milliseconds (default: 300)
     pub watch_debounce_ms: u64,
-    
-    /// WebSocket path for reload (default: "/ws/reload")
-    pub reload_ws_path: String,
     
     /// Server port (default: 8080)
     pub port: u16,
@@ -2231,7 +2218,6 @@ pub use init::{scaffold, InitError};
     pub pkg_output_path: PathBuf,
     pub index_html_path: PathBuf,
     pub watch_debounce_ms: u64,
-    pub reload_ws_path: String,
     pub port: u16,
     pub build_timeout_secs: u64,
 }
@@ -2700,9 +2686,6 @@ pub struct BuildConfig {
     /// Watch debounce interval in milliseconds (default: 300)
     pub watch_debounce_ms: u64,
     
-    /// WebSocket path for reload signaling (default: "/ws/reload")
-    pub reload_ws_path: String,
-    
     /// Server port (default: 8080)
     pub port: u16,
     
@@ -2721,7 +2704,6 @@ pub struct BuildConfig {
 <li><code>pkg_output_path</code> = <code>../frontend/pkg</code></li>
 <li><code>index_html_path</code> = <code>../frontend/index.html</code></li>
 <li><code>watch_debounce_ms</code> = <code>300</code></li>
-<li><code>reload_ws_path</code> = <code>"/ws/reload"</code></li>
 <li><code>port</code> = <code>8080</code></li>
 <li><code>build_timeout_secs</code> = <code>300</code></li>
 </ul>
@@ -2801,18 +2783,6 @@ let config = BuildConfig::new("/absolute/path/to/frontend");
     ..BuildConfig::new("../frontend")
 };
 <span class="boring">}</span></code></pre>
-<h3 id="reload_ws_path"><a class="header" href="#reload_ws_path">reload_ws_path</a></h3>
-<p><strong>Type:</strong> <code>String</code>
-<strong>Default:</strong> <code>"/ws/reload"</code></p>
-<p>WebSocket endpoint path for live reload. Must match the path in the injected script.</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let config = BuildConfig {
-    reload_ws_path: "/livereload".to_string(),
-    ..BuildConfig::new("../frontend")
-};
-<span class="boring">}</span></code></pre>
-<p><strong>Note:</strong> If you change this, also update <code>RELOAD_SCRIPT</code> in <code>reload.rs</code>.</p>
 <h3 id="port"><a class="header" href="#port">port</a></h3>
 <p><strong>Type:</strong> <code>u16</code>
 <strong>Default:</strong> <code>8080</code></p>
@@ -3768,7 +3738,6 @@ Next steps:
     pub pkg_output_path: PathBuf,
     pub index_html_path: PathBuf,
     pub watch_debounce_ms: u64,
-    pub reload_ws_path: String,
     pub port: u16,
     pub build_timeout_secs: u64,
 }
@@ -4727,7 +4696,6 @@ CMD ["my-app-backend"]
     pkg_output_path: PathBuf,
     index_html_path: PathBuf,
     watch_debounce_ms: u64,      // default: 300
-    reload_ws_path: String,      // default: "/ws/reload"
     port: u16,                   // default: 8080
     build_timeout_secs: u64,     // default: 300
 }
@@ -4751,6 +4719,15 @@ CMD ["my-app-backend"]
 <p>All notable changes to flux-wasm-builder are documented in this file.</p>
 <p>The format is based on <a href="https://keepachangelog.com/en/1.0.0/">Keep a Changelog</a>,
 and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
+<h2 id="072---2026-03-02"><a class="header" href="#072---2026-03-02">[0.7.2] - 2026-03-02</a></h2>
+<h3 id="fixed"><a class="header" href="#fixed">Fixed</a></h3>
+<ul>
+<li>Removed unused re-exports from scaffolded backend’s <code>build_subsystem/mod.rs</code></li>
+<li>Removed unused <code>reload_ws_path</code> field from <code>BuildConfig</code> in scaffolded projects</li>
+<li>Added <code>#[allow(dead_code)]</code> to <code>run_command_with_timeout</code> utility function</li>
+<li>Fixed clippy <code>single_match</code> and <code>redundant_closure</code> lints in build coordinator template</li>
+<li>Scaffolded backend now compiles without clippy warnings</li>
+</ul>
 <h2 id="060---2026-03-02"><a class="header" href="#060---2026-03-02">[0.6.0] - 2026-03-02</a></h2>
 <h3 id="added"><a class="header" href="#added">Added</a></h3>
 <ul>
@@ -4855,6 +4832,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <tr><th>Version</th><th>Date</th><th>Description</th></tr>
 </thead>
 <tbody>
+<tr><td>0.7.2</td><td>2026-03-02</td><td>Clippy lint fixes for scaffolded backend</td></tr>
 <tr><td>0.6.0</td><td>2026-03-02</td><td>Complete implementation, documentation</td></tr>
 <tr><td>0.5.0</td><td>2026-03-01</td><td>Shared types crate</td></tr>
 <tr><td>0.4.0</td><td>2026-02-28</td><td>Static asset serving</td></tr>

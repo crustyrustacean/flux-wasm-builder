@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-f4f20c9a.js";
+            window.path_to_searchindex_js = "../searchindex-93205104.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-52700a75.js"></script>
@@ -184,6 +184,15 @@
 <p>All notable changes to flux-wasm-builder are documented in this file.</p>
 <p>The format is based on <a href="https://keepachangelog.com/en/1.0.0/">Keep a Changelog</a>,
 and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
+<h2 id="072---2026-03-02"><a class="header" href="#072---2026-03-02">[0.7.2] - 2026-03-02</a></h2>
+<h3 id="fixed"><a class="header" href="#fixed">Fixed</a></h3>
+<ul>
+<li>Removed unused re-exports from scaffolded backend’s <code>build_subsystem/mod.rs</code></li>
+<li>Removed unused <code>reload_ws_path</code> field from <code>BuildConfig</code> in scaffolded projects</li>
+<li>Added <code>#[allow(dead_code)]</code> to <code>run_command_with_timeout</code> utility function</li>
+<li>Fixed clippy <code>single_match</code> and <code>redundant_closure</code> lints in build coordinator template</li>
+<li>Scaffolded backend now compiles without clippy warnings</li>
+</ul>
 <h2 id="060---2026-03-02"><a class="header" href="#060---2026-03-02">[0.6.0] - 2026-03-02</a></h2>
 <h3 id="added"><a class="header" href="#added">Added</a></h3>
 <ul>
@@ -288,6 +297,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <tr><th>Version</th><th>Date</th><th>Description</th></tr>
 </thead>
 <tbody>
+<tr><td>0.7.2</td><td>2026-03-02</td><td>Clippy lint fixes for scaffolded backend</td></tr>
 <tr><td>0.6.0</td><td>2026-03-02</td><td>Complete implementation, documentation</td></tr>
 <tr><td>0.5.0</td><td>2026-03-01</td><td>Shared types crate</td></tr>
 <tr><td>0.4.0</td><td>2026-02-28</td><td>Static asset serving</td></tr>
