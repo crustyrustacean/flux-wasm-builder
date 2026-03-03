@@ -87,7 +87,6 @@ pub fn scaffold(root: &Path, name: &str) -> Result<(), InitError> {
 fn create_dirs(project_root: &Path) -> Result<(), InitError> {
     let dirs = [
         project_root.join(".cargo"),
-        project_root.join("backend/src/build_subsystem"),
         project_root.join("backend/src/api"),
         project_root.join("frontend/src"),
         project_root.join("shared/src"),
@@ -131,30 +130,7 @@ fn write_files(project_root: &Path, name: &str) -> Result<(), InitError> {
             project_root.join("backend/src/main.rs"),
             templates::backend_main_rs().to_string(),
         ),
-        (
-            project_root.join("backend/src/build_subsystem/mod.rs"),
-            templates::backend_build_subsystem_mod().to_string(),
-        ),
-        (
-            project_root.join("backend/src/build_subsystem/build.rs"),
-            templates::backend_build_subsystem_build_rs().to_string(),
-        ),
-        (
-            project_root.join("backend/src/build_subsystem/build_coordinator.rs"),
-            templates::backend_build_subsystem_build_coordinator_rs().to_string(),
-        ),
-        (
-            project_root.join("backend/src/build_subsystem/watcher.rs"),
-            templates::backend_build_subsystem_watcher_rs().to_string(),
-        ),
-        (
-            project_root.join("backend/src/build_subsystem/reload.rs"),
-            templates::backend_build_subsystem_reload_rs().to_string(),
-        ),
-        (
-            project_root.join("backend/src/build_subsystem/static_assets.rs"),
-            templates::backend_build_subsystem_static_assets_rs().to_string(),
-        ),
+        
         (
             project_root.join("backend/src/api/mod.rs"),
             templates::backend_api_mod(name),

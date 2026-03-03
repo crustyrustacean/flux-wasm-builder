@@ -51,36 +51,6 @@ pub fn backend_main_rs() -> &'static str {
     include_str!("templates/backend/main.rs")
 }
 
-/// Backend build_subsystem/mod.rs
-pub fn backend_build_subsystem_mod() -> &'static str {
-    include_str!("templates/backend/build_subsystem/mod.rs")
-}
-
-/// Backend build_subsystem/build.rs - wasm-pack invocation
-pub fn backend_build_subsystem_build_rs() -> &'static str {
-    include_str!("templates/backend/build_subsystem/build.rs")
-}
-
-/// Backend build_subsystem/build_coordinator.rs - build loop with coalescing
-pub fn backend_build_subsystem_build_coordinator_rs() -> &'static str {
-    include_str!("templates/backend/build_subsystem/build_coordinator.rs")
-}
-
-/// Backend build_subsystem/watcher.rs - file watcher for .rs source changes
-pub fn backend_build_subsystem_watcher_rs() -> &'static str {
-    include_str!("templates/backend/build_subsystem/watcher.rs")
-}
-
-/// Backend build_subsystem/static_assets.rs - asset serving handlers
-pub fn backend_build_subsystem_static_assets_rs() -> &'static str {
-    include_str!("templates/backend/build_subsystem/static_assets.rs")
-}
-
-/// Backend build_subsystem/reload.rs - WebSocket live reload
-pub fn backend_build_subsystem_reload_rs() -> &'static str {
-    include_str!("templates/backend/build_subsystem/reload.rs")
-}
-
 /// Backend API module
 pub fn backend_api_mod(name: &str) -> String {
     let crate_name = name.replace('-', "_");
