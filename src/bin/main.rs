@@ -2,6 +2,7 @@
 
 // dependencies
 use clap::{Parser, Subcommand};
+use flux_wasm_builder::dev;
 use flux_wasm_builder::init::scaffold;
 use std::path::PathBuf;
 
@@ -22,13 +23,20 @@ enum Commands {
         #[arg(short, long, default_value = ".")]
         path: PathBuf,
     },
+
+    /// Launch the development server to build the project
+    Dev,
 }
 
 fn run(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
     match cli.command {
         Commands::Init { name, path } => {
             scaffold(&path, &name)?;
-        }
+        },
+
+        Commands::Dev => {
+            dev::run()?;
+        },
     }
     Ok(())
 }

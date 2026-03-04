@@ -2,6 +2,7 @@
 
 // module declarations
 pub mod build;
+pub mod dev;
 pub mod domain;
 pub mod env_check;
 pub mod init;
@@ -18,6 +19,7 @@ pub use build::{
 #[cfg(not(feature = "embed-assets"))]
 pub use build::{inject_reload_script, ws_reload_handler, RELOAD_SCRIPT};
 
+pub use dev::run;
 pub use env_check::EnvCheckError;
 pub use init::{scaffold, InitError};
 pub use validation::ValidationError;
