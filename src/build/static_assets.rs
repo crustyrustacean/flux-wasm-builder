@@ -12,10 +12,10 @@
 //! In release mode (with `embed-assets` feature), assets are embedded
 //! directly into the binary at compile time using `include_dir`.
 
-use actix_web::{web, HttpResponse, Responder};
+use actix_web::{HttpResponse, Responder, web};
 
-use super::build::BuildConfig;
 use super::DevMode;
+use super::build::BuildConfig;
 
 // Dev-mode only import for reload script injection
 #[cfg(not(feature = "embed-assets"))]
@@ -27,8 +27,10 @@ static EMBEDDED_PKG: include_dir::Dir =
     include_dir::include_dir!("$CARGO_MANIFEST_DIR/../frontend/pkg");
 
 #[cfg(feature = "embed-assets")]
-static EMBEDDED_INDEX: &[u8] =
-    include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/../frontend/index.html"));
+static EMBEDDED_INDEX: &[u8] = include_bytes!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../frontend/index.html"
+));
 
 /// Serve a file from the pkg/ directory.
 ///
@@ -159,7 +161,7 @@ pub async fn spa_fallback(
     match tokio::fs::read(&config.index_html_path).await {
         Ok(bytes) => {
             tracing::debug!(path = %config.index_html_path.display(), "serving index.html");
-            
+
             let html = if dev_mode.0 {
                 // Dev mode: inject reload script
                 let html_str = String::from_utf8_lossy(&bytes);
@@ -168,7 +170,7 @@ pub async fn spa_fallback(
                 // Release mode: serve as-is
                 bytes
             };
-            
+
             HttpResponse::Ok()
                 .content_type("text/html; charset=utf-8")
                 .body(html)
@@ -179,8 +181,7 @@ pub async fn spa_fallback(
                 path = %config.index_html_path.display(),
                 "failed to read index.html"
             );
-            HttpResponse::InternalServerError()
-                .body("internal error: could not read index.html")
+            HttpResponse::InternalServerError().body("internal error: could not read index.html")
         }
     }
 }
@@ -196,7 +197,7 @@ pub async fn spa_fallback(
     _dev_mode: web::Data<DevMode>,
 ) -> impl Responder {
     tracing::debug!("serving embedded index.html");
-    
+
     HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
         .body(EMBEDDED_INDEX.to_vec())
@@ -205,7 +206,7 @@ pub async fn spa_fallback(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use actix_web::{test, App};
+    use actix_web::{App, test};
     use tempfile::tempdir;
 
     // Note: do not annotate the return type of App::new() chains.
@@ -243,11 +244,21 @@ mod tests {
                 .route("/pkg/{filename}", web::get().to(serve_pkg_file)),
         )
         .await;
-        let req = test::TestRequest::get().uri("/pkg/app_bg.wasm").to_request();
+        let req = test::TestRequest::get()
+            .uri("/pkg/app_bg.wasm")
+            .to_request();
         let resp = test::call_service(&app, req).await;
         assert_eq!(resp.status(), 200);
-        let ct = resp.headers().get("content-type").unwrap().to_str().unwrap();
-        assert!(ct.contains("application/wasm"), "unexpected content-type: {ct}");
+        let ct = resp
+            .headers()
+            .get("content-type")
+            .unwrap()
+            .to_str()
+            .unwrap();
+        assert!(
+            ct.contains("application/wasm"),
+            "unexpected content-type: {ct}"
+        );
     }
 
     #[actix_web::test]
@@ -263,7 +274,9 @@ mod tests {
                 .route("/pkg/{filename}", web::get().to(serve_pkg_file)),
         )
         .await;
-        let req = test::TestRequest::get().uri("/pkg/nonexistent.js").to_request();
+        let req = test::TestRequest::get()
+            .uri("/pkg/nonexistent.js")
+            .to_request();
         assert_eq!(test::call_service(&app, req).await.status(), 404);
     }
 
@@ -287,11 +300,7 @@ mod tests {
             .uri("/pkg/..%2Fsecret.txt")
             .to_request();
         let status = test::call_service(&app, req).await.status();
-        assert_ne!(
-            status.as_u16(),
-            200,
-            "path traversal must not return 200"
-        );
+        assert_ne!(status.as_u16(), 200, "path traversal must not return 200");
     }
 
     #[actix_web::test]
@@ -310,10 +319,17 @@ mod tests {
                 .default_service(web::get().to(spa_fallback)),
         )
         .await;
-        let req = test::TestRequest::get().uri("/any/unknown/path").to_request();
+        let req = test::TestRequest::get()
+            .uri("/any/unknown/path")
+            .to_request();
         let resp = test::call_service(&app, req).await;
         assert_eq!(resp.status(), 200);
-        let ct = resp.headers().get("content-type").unwrap().to_str().unwrap();
+        let ct = resp
+            .headers()
+            .get("content-type")
+            .unwrap()
+            .to_str()
+            .unwrap();
         assert!(ct.contains("text/html"), "unexpected content-type: {ct}");
     }
 
@@ -338,7 +354,12 @@ mod tests {
         .await;
         let req = test::TestRequest::get().uri("/api/hello").to_request();
         let resp = test::call_service(&app, req).await;
-        let ct = resp.headers().get("content-type").unwrap().to_str().unwrap();
+        let ct = resp
+            .headers()
+            .get("content-type")
+            .unwrap()
+            .to_str()
+            .unwrap();
         assert!(
             !ct.contains("text/html"),
             "API route returned index.html instead of JSON"
@@ -362,8 +383,9 @@ mod tests {
         )
         .await;
         let body = test::read_body(
-            test::call_service(&app, test::TestRequest::get().uri("/").to_request()).await
-        ).await;
+            test::call_service(&app, test::TestRequest::get().uri("/").to_request()).await,
+        )
+        .await;
         assert!(
             std::str::from_utf8(&body).unwrap().contains("/ws/reload"),
             "index.html should contain reload script in dev mode"
@@ -387,8 +409,9 @@ mod tests {
         )
         .await;
         let body = test::read_body(
-            test::call_service(&app, test::TestRequest::get().uri("/").to_request()).await
-        ).await;
+            test::call_service(&app, test::TestRequest::get().uri("/").to_request()).await,
+        )
+        .await;
         assert!(
             !std::str::from_utf8(&body).unwrap().contains("/ws/reload"),
             "index.html should not contain reload script in release mode"
@@ -424,13 +447,16 @@ mod embed_tests {
 
     #[test]
     fn embedded_index_is_non_empty() {
-        assert!(!EMBEDDED_INDEX.is_empty(), "embedded index.html should not be empty");
+        assert!(
+            !EMBEDDED_INDEX.is_empty(),
+            "embedded index.html should not be empty"
+        );
     }
 
     #[test]
     fn embedded_index_does_not_contain_reload_script() {
-        let html = std::str::from_utf8(EMBEDDED_INDEX)
-            .expect("embedded index.html should be valid UTF-8");
+        let html =
+            std::str::from_utf8(EMBEDDED_INDEX).expect("embedded index.html should be valid UTF-8");
         assert!(
             !html.contains("/ws/reload"),
             "embedded index.html should not contain reload script reference"

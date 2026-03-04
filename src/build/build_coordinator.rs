@@ -7,7 +7,7 @@
 //! into at most two builds (one running + one pending).
 
 use std::future::Future;
-use tokio::sync::{mpsc::Receiver, broadcast};
+use tokio::sync::{broadcast, mpsc::Receiver};
 
 use super::build::BuildError;
 
@@ -60,25 +60,19 @@ pub async fn run_build_loop<F, Fut>(
     mut build_rx: Receiver<()>,
     reload_tx: broadcast::Sender<()>,
     build_fn: F,
-)
-where
+) where
     F: Fn() -> Fut + Send + 'static,
     Fut: Future<Output = Result<(), BuildError>> + Send,
 {
     let mut pending = false;
-    
+
     loop {
         // If not pending, wait for a trigger
-        if !pending {
-            match build_rx.recv().await {
-                None => {
-                    tracing::debug!("build channel closed — coordinator exiting");
-                    return;
-                }
-                Some(()) => {}
-            }
+        if !pending && build_rx.recv().await.is_none() {
+            tracing::debug!("build channel closed — coordinator exiting");
+            return;
         }
-        
+
         // Reset pending flag - we're now processing this build
         pending = false;
 
@@ -92,7 +86,7 @@ where
 
         // Execute build
         let span = tracing::info_span!("rebuild_cycle");
-        let result = span.in_scope(|| build_fn()).await;
+        let result = span.in_scope(&build_fn).await;
 
         match result {
             Ok(()) => {

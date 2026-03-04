@@ -31,14 +31,16 @@ mod watcher;
 #[cfg(not(feature = "embed-assets"))]
 mod reload;
 
-pub use build::{BuildConfig, BuildError, run_wasm_pack, run_wasm_pack_with_env, run_command_with_timeout};
+pub use build::{
+    BuildConfig, BuildError, run_command_with_timeout, run_wasm_pack, run_wasm_pack_with_env,
+};
 pub use build_coordinator::run_build_loop;
 pub use static_assets::{serve_pkg_file, spa_fallback};
-pub use watcher::{start_watcher, FileWatcher};
+pub use watcher::{FileWatcher, start_watcher};
 
 // Only export reload functionality in dev mode
 #[cfg(not(feature = "embed-assets"))]
-pub use reload::{inject_reload_script, ws_reload_handler, RELOAD_SCRIPT};
+pub use reload::{RELOAD_SCRIPT, inject_reload_script, ws_reload_handler};
 
 /// Flag indicating whether the server is running in development mode.
 ///

@@ -9,10 +9,8 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
     );
 }
 
-async fn hello() -> impl Responder {
-    HttpResponse::Ok().json(HelloResponse {
-        message: "Hello from the backend!".to_string(),
-    })
+async fn health_check() -> impl Responder {
+    HttpResponse::Ok().finish()
 }
 
 async fn status() -> impl Responder {

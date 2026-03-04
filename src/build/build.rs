@@ -135,7 +135,9 @@ pub async fn run_wasm_pack_with_env(
                 tracing::warn!(error = %e, "failed to kill timed-out wasm-pack process");
                 return Err(BuildError::KillFailed { source: e });
             }
-            Err(BuildError::Timeout { secs: config.build_timeout_secs })
+            Err(BuildError::Timeout {
+                secs: config.build_timeout_secs,
+            })
         }
     }
 }
@@ -148,16 +150,21 @@ pub async fn run_command_with_timeout(
     mut cmd: Command,
     timeout: Duration,
 ) -> Result<(), BuildError> {
-    let mut child = cmd.spawn()
+    let mut child = cmd
+        .spawn()
         .map_err(|e| BuildError::SpawnFailed { source: e })?;
 
     match tokio::time::timeout(timeout, child.wait()).await {
         Ok(Ok(status)) if status.success() => Ok(()),
-        Ok(Ok(status)) => Err(BuildError::WasmPackFailed { exit_code: status.code() }),
+        Ok(Ok(status)) => Err(BuildError::WasmPackFailed {
+            exit_code: status.code(),
+        }),
         Ok(Err(e)) => Err(BuildError::WaitFailed { source: e }),
         Err(_elapsed) => {
             let _ = child.kill().await; // best-effort; process is already considered failed
-            Err(BuildError::Timeout { secs: timeout.as_secs() })
+            Err(BuildError::Timeout {
+                secs: timeout.as_secs(),
+            })
         }
     }
 }
@@ -176,7 +183,10 @@ mod tests {
     #[test]
     fn build_config_default_index_html_path_is_relative_to_frontend() {
         let config = BuildConfig::new(PathBuf::from("../frontend"));
-        assert_eq!(config.index_html_path, PathBuf::from("../frontend/index.html"));
+        assert_eq!(
+            config.index_html_path,
+            PathBuf::from("../frontend/index.html")
+        );
     }
 
     #[test]
@@ -235,11 +245,8 @@ mod tests {
             c.arg("60");
             c
         };
-        
-        let result = run_command_with_timeout(
-            cmd,
-            Duration::from_millis(100)
-        ).await;
+
+        let result = run_command_with_timeout(cmd, Duration::from_millis(100)).await;
         assert!(matches!(result, Err(BuildError::Timeout { .. })));
     }
 
@@ -260,11 +267,8 @@ mod tests {
             c.arg("test");
             c
         };
-        
-        let result = run_command_with_timeout(
-            cmd,
-            Duration::from_secs(5)
-        ).await;
+
+        let result = run_command_with_timeout(cmd, Duration::from_secs(5)).await;
         assert!(result.is_ok());
     }
 
@@ -284,11 +288,11 @@ mod tests {
             let c = Command::new("false");
             c
         };
-        
-        let result = run_command_with_timeout(
-            cmd,
-            Duration::from_secs(5)
-        ).await;
-        assert!(matches!(result, Err(BuildError::WasmPackFailed { exit_code: Some(1) })));
+
+        let result = run_command_with_timeout(cmd, Duration::from_secs(5)).await;
+        assert!(matches!(
+            result,
+            Err(BuildError::WasmPackFailed { exit_code: Some(1) })
+        ));
     }
 }

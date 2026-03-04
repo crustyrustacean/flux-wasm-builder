@@ -7,20 +7,45 @@ use std::path::PathBuf;
 #[derive(Debug, thiserror::Error)]
 pub enum ConfigError {
     #[error("failed to read flux.toml: {source}")]
-    ReadFailed { #[from] source: std::io::Error },
-    
+    ReadFailed {
+        #[from]
+        source: std::io::Error,
+    },
+
     #[error("failed to parse flux.toml: {source}")]
-    ParseFailed { #[from] source: toml::de::Error },
+    ParseFailed {
+        #[from]
+        source: toml::de::Error,
+    },
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct FluxConfig {
     pub project: ProjectConfig,
+    #[serde(default)]
+    pub dev: DevConfig,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct ProjectConfig {
     pub name: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct DevConfig {
+    pub public_port: u16,
+    pub backend_port: u16,
+    pub watch_debounce_ms: u64,
+}
+
+impl Default for DevConfig {
+    fn default() -> Self {
+        Self {
+            public_port: 8080,
+            backend_port: 3001,
+            watch_debounce_ms: 300,
+        }
+    }
 }
 
 impl FluxConfig {

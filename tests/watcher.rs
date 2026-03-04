@@ -5,9 +5,9 @@
 
 use std::time::Duration;
 
-use flux_wasm_builder::{start_watcher, run_build_loop, BuildError};
+use flux_wasm_builder::{BuildError, run_build_loop, start_watcher};
 use tempfile::tempdir;
-use tokio::sync::{mpsc, broadcast};
+use tokio::sync::{broadcast, mpsc};
 
 // =============================================================================
 // Watcher Integration Tests
@@ -32,10 +32,10 @@ fn rs_file_change_triggers_build_signal() {
     // Use a timeout to avoid hanging forever
     let result = std::thread::spawn(move || {
         let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(async {
-            tokio::time::timeout(Duration::from_secs(3), rx.recv()).await
-        })
-    }).join().unwrap();
+        rt.block_on(async { tokio::time::timeout(Duration::from_secs(3), rx.recv()).await })
+    })
+    .join()
+    .unwrap();
 
     assert!(
         result.is_ok() && result.unwrap().is_some(),
@@ -61,10 +61,10 @@ fn non_rs_file_does_not_trigger_build_signal() {
     // Use a timeout - should timeout since no signal should come
     let result = std::thread::spawn(move || {
         let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(async {
-            tokio::time::timeout(Duration::from_millis(600), rx.recv()).await
-        })
-    }).join().unwrap();
+        rt.block_on(async { tokio::time::timeout(Duration::from_millis(600), rx.recv()).await })
+    })
+    .join()
+    .unwrap();
 
     assert!(
         result.is_err(),
@@ -98,10 +98,10 @@ fn dropping_watcher_stops_events() {
     // Use a timeout - should timeout or get None since watcher is dropped
     let result = std::thread::spawn(move || {
         let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(async {
-            tokio::time::timeout(Duration::from_millis(600), rx.recv()).await
-        })
-    }).join().unwrap();
+        rt.block_on(async { tokio::time::timeout(Duration::from_millis(600), rx.recv()).await })
+    })
+    .join()
+    .unwrap();
 
     // Either timeout (no signal) or receive None (channel closed)
     assert!(
@@ -272,10 +272,7 @@ async fn watcher_and_coordinator_integration() {
     // Wait for the build to complete
     let result = tokio::time::timeout(Duration::from_secs(5), build_handle).await;
 
-    assert!(
-        result.is_ok(),
-        "build should have completed within timeout"
-    );
+    assert!(result.is_ok(), "build should have completed within timeout");
     assert_eq!(
         *build_count.lock().unwrap(),
         1,

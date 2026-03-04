@@ -3,10 +3,12 @@
 // Integration tests for reload functionality.
 // Run with: cargo test --test reload
 
-use actix_web::{App, web, test as actix_test};
-use tokio::sync::broadcast;
-use flux_wasm_builder::{ws_reload_handler, DevMode, BuildConfig, spa_fallback, inject_reload_script, RELOAD_SCRIPT};
+use actix_web::{App, test as actix_test, web};
+use flux_wasm_builder::{
+    BuildConfig, DevMode, RELOAD_SCRIPT, inject_reload_script, spa_fallback, ws_reload_handler,
+};
 use tempfile::tempdir;
+use tokio::sync::broadcast;
 
 // =============================================================================
 // Unit Tests for inject_reload_script
@@ -18,37 +20,48 @@ fn script_is_injected_before_body_close_tag() {
     let result = inject_reload_script(html);
     let script_pos = result.find(RELOAD_SCRIPT).expect("script not found");
     let body_pos = result.find("</body>").expect("</body> not found");
-    assert!(script_pos < body_pos,
+    assert!(
+        script_pos < body_pos,
         "script should be injected before </body>, but script is at {} and </body> is at {}",
-        script_pos, body_pos);
+        script_pos,
+        body_pos
+    );
 }
 
 #[test]
 fn handles_html_without_body_tag_gracefully() {
     let html = "<html><p>No body tag</p></html>";
     let result = inject_reload_script(html);
-    assert!(result.contains(RELOAD_SCRIPT),
-        "script should be appended when </body> is absent");
+    assert!(
+        result.contains(RELOAD_SCRIPT),
+        "script should be appended when </body> is absent"
+    );
 }
 
 #[test]
 fn reload_script_references_ws_reload_path() {
-    assert!(RELOAD_SCRIPT.contains("/ws/reload"),
-        "reload script must reference /ws/reload WebSocket path");
+    assert!(
+        RELOAD_SCRIPT.contains("/ws/reload"),
+        "reload script must reference /ws/reload WebSocket path"
+    );
 }
 
 #[test]
 fn reload_script_contains_onclose_reconnect() {
-    assert!(RELOAD_SCRIPT.contains("onclose"),
-        "reload script must include reconnect logic — see Section 4.3 of spec");
+    assert!(
+        RELOAD_SCRIPT.contains("onclose"),
+        "reload script must include reconnect logic — see Section 4.3 of spec"
+    );
 }
 
 #[test]
 fn inject_reload_script_preserves_original_content() {
     let html = "<html><body><p>Hello World</p></body></html>";
     let result = inject_reload_script(html);
-    assert!(result.contains("<p>Hello World</p>"),
-        "original content should be preserved");
+    assert!(
+        result.contains("<p>Hello World</p>"),
+        "original content should be preserved"
+    );
 }
 
 #[test]
@@ -78,8 +91,9 @@ async fn ws_endpoint_returns_101_switching_protocols() {
     let app = actix_test::init_service(
         App::new()
             .app_data(web::Data::new(tx))
-            .route("/ws/reload", web::get().to(ws_reload_handler))
-    ).await;
+            .route("/ws/reload", web::get().to(ws_reload_handler)),
+    )
+    .await;
     let req = actix_test::TestRequest::get()
         .uri("/ws/reload")
         .insert_header(("upgrade", "websocket"))
@@ -107,11 +121,13 @@ async fn index_html_contains_reload_script_when_dev_mode_true() {
         App::new()
             .app_data(web::Data::new(config))
             .app_data(web::Data::new(DevMode(true)))
-            .default_service(web::get().to(spa_fallback))
-    ).await;
+            .default_service(web::get().to(spa_fallback)),
+    )
+    .await;
     let body = actix_test::read_body(
-        actix_test::call_service(&app, actix_test::TestRequest::get().uri("/").to_request()).await
-    ).await;
+        actix_test::call_service(&app, actix_test::TestRequest::get().uri("/").to_request()).await,
+    )
+    .await;
     assert!(
         std::str::from_utf8(&body).unwrap().contains("/ws/reload"),
         "index.html should contain reload script in dev mode"
@@ -131,11 +147,13 @@ async fn index_html_omits_reload_script_when_dev_mode_false() {
         App::new()
             .app_data(web::Data::new(config))
             .app_data(web::Data::new(DevMode(false)))
-            .default_service(web::get().to(spa_fallback))
-    ).await;
+            .default_service(web::get().to(spa_fallback)),
+    )
+    .await;
     let body = actix_test::read_body(
-        actix_test::call_service(&app, actix_test::TestRequest::get().uri("/").to_request()).await
-    ).await;
+        actix_test::call_service(&app, actix_test::TestRequest::get().uri("/").to_request()).await,
+    )
+    .await;
     assert!(
         !std::str::from_utf8(&body).unwrap().contains("/ws/reload"),
         "index.html should not contain reload script in release mode"

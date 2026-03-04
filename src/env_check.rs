@@ -12,7 +12,9 @@ pub enum EnvCheckError {
     #[error("wasm-pack version {found} is below minimum required {required}")]
     WasmPackVersionTooOld { found: String, required: String },
 
-    #[error("wasm32-unknown-unknown target not installed — run: rustup target add wasm32-unknown-unknown")]
+    #[error(
+        "wasm32-unknown-unknown target not installed — run: rustup target add wasm32-unknown-unknown"
+    )]
     Wasm32TargetMissing,
 
     #[error("failed to invoke '{command}': {source}")]

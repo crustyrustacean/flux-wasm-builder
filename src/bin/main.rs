@@ -28,15 +28,15 @@ enum Commands {
     Dev,
 }
 
-fn run(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
+async fn run(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
     match cli.command {
         Commands::Init { name, path } => {
             scaffold(&path, &name)?;
-        },
+        }
 
         Commands::Dev => {
-            dev::run()?;
-        },
+            dev::run().await?;
+        }
     }
     Ok(())
 }
@@ -52,12 +52,13 @@ fn init_tracing() {
         .init();
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     init_tracing();
 
     let cli = Cli::parse();
 
-    if let Err(e) = run(cli) {
+    if let Err(e) = run(cli).await {
         eprintln!("error: {e}");
         std::process::exit(1);
     }

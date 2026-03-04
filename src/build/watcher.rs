@@ -10,12 +10,13 @@ use std::path::Path;
 use std::time::Duration;
 
 use notify_debouncer_mini::notify::RecursiveMode;
-use notify_debouncer_mini::{new_debouncer, DebounceEventResult};
+use notify_debouncer_mini::{DebounceEventResult, new_debouncer};
 use tokio::sync::mpsc::Sender;
 
 /// Type alias for the watcher type returned by [`start_watcher`].
 /// Uses the recommended watcher backend for the current platform.
-pub type FileWatcher = notify_debouncer_mini::Debouncer<notify_debouncer_mini::notify::RecommendedWatcher>;
+pub type FileWatcher =
+    notify_debouncer_mini::Debouncer<notify_debouncer_mini::notify::RecommendedWatcher>;
 
 /// Start the file watcher.
 ///
@@ -67,12 +68,9 @@ pub fn start_watcher(
             match result {
                 Ok(events) => {
                     // Check if any event involves a .rs file
-                    let rs_change = events.iter().any(|e| {
-                        e.path
-                            .extension()
-                            .map(|ext| ext == "rs")
-                            .unwrap_or(false)
-                    });
+                    let rs_change = events
+                        .iter()
+                        .any(|e| e.path.extension().map(|ext| ext == "rs").unwrap_or(false));
 
                     if rs_change {
                         tracing::debug!(event_count = events.len(), "Rust source change detected");
@@ -97,7 +95,9 @@ pub fn start_watcher(
         },
     )?;
 
-    debouncer.watcher().watch(watch_path, RecursiveMode::Recursive)?;
+    debouncer
+        .watcher()
+        .watch(watch_path, RecursiveMode::Recursive)?;
     tracing::info!("file watcher active");
 
     Ok(debouncer)
@@ -133,10 +133,10 @@ mod tests {
         // Use a timeout to avoid hanging forever
         let result = std::thread::spawn(move || {
             let rt = tokio::runtime::Runtime::new().unwrap();
-            rt.block_on(async {
-                tokio::time::timeout(Duration::from_secs(3), rx.recv()).await
-            })
-        }).join().unwrap();
+            rt.block_on(async { tokio::time::timeout(Duration::from_secs(3), rx.recv()).await })
+        })
+        .join()
+        .unwrap();
 
         assert!(
             result.is_ok() && result.unwrap().is_some(),
@@ -162,10 +162,10 @@ mod tests {
         // Use a timeout - should timeout since no signal should come
         let result = std::thread::spawn(move || {
             let rt = tokio::runtime::Runtime::new().unwrap();
-            rt.block_on(async {
-                tokio::time::timeout(Duration::from_millis(600), rx.recv()).await
-            })
-        }).join().unwrap();
+            rt.block_on(async { tokio::time::timeout(Duration::from_millis(600), rx.recv()).await })
+        })
+        .join()
+        .unwrap();
 
         assert!(
             result.is_err(),
@@ -199,10 +199,10 @@ mod tests {
         // Use a timeout - should timeout or get None since watcher is dropped
         let result = std::thread::spawn(move || {
             let rt = tokio::runtime::Runtime::new().unwrap();
-            rt.block_on(async {
-                tokio::time::timeout(Duration::from_millis(600), rx.recv()).await
-            })
-        }).join().unwrap();
+            rt.block_on(async { tokio::time::timeout(Duration::from_millis(600), rx.recv()).await })
+        })
+        .join()
+        .unwrap();
 
         // Either timeout (no signal) or receive None (channel closed)
         assert!(
@@ -215,10 +215,7 @@ mod tests {
     fn watcher_returns_error_for_nonexistent_path() {
         let (tx, _rx) = mpsc::channel(8);
         let result = start_watcher(Path::new("/nonexistent/path/that/does/not/exist"), 50, tx);
-        assert!(
-            result.is_err(),
-            "should return error for nonexistent path"
-        );
+        assert!(result.is_err(), "should return error for nonexistent path");
     }
 
     #[test]

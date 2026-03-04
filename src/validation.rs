@@ -84,15 +84,56 @@ pub fn validate_project_name(name: &str) -> Result<(), ValidationError> {
     // Check reserved words (Rust keywords and Cargo commands)
     const RESERVED_WORDS: &[&str] = &[
         // Cargo commands
-        "test", "build", "run", "check", "doc", "publish",
-        "new", "init", "install", "uninstall", "search", "clean",
+        "test",
+        "build",
+        "run",
+        "check",
+        "doc",
+        "publish",
+        "new",
+        "init",
+        "install",
+        "uninstall",
+        "search",
+        "clean",
         // Rust keywords
-        "fn", "let", "mut", "const", "static", "type", "struct",
-        "enum", "impl", "trait", "mod", "use", "pub", "crate",
-        "self", "super", "where", "for", "loop", "while", "if",
-        "else", "match", "return", "break", "continue", "move",
-        "ref", "as", "in", "extern", "unsafe", "dyn", "async",
-        "await", "true", "false",
+        "fn",
+        "let",
+        "mut",
+        "const",
+        "static",
+        "type",
+        "struct",
+        "enum",
+        "impl",
+        "trait",
+        "mod",
+        "use",
+        "pub",
+        "crate",
+        "self",
+        "super",
+        "where",
+        "for",
+        "loop",
+        "while",
+        "if",
+        "else",
+        "match",
+        "return",
+        "break",
+        "continue",
+        "move",
+        "ref",
+        "as",
+        "in",
+        "extern",
+        "unsafe",
+        "dyn",
+        "async",
+        "await",
+        "true",
+        "false",
     ];
 
     let lower_name = name.to_lowercase();
@@ -104,9 +145,8 @@ pub fn validate_project_name(name: &str) -> Result<(), ValidationError> {
 
     // Check Windows reserved filenames
     const WINDOWS_RESERVED: &[&str] = &[
-        "CON", "PRN", "AUX", "NUL",
-        "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
-        "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+        "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8",
+        "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
     ];
 
     let upper_name = name.to_uppercase();
@@ -135,7 +175,10 @@ mod tests {
 
     #[test]
     fn rejects_empty_name() {
-        assert!(matches!(validate_project_name(""), Err(ValidationError::Empty)));
+        assert!(matches!(
+            validate_project_name(""),
+            Err(ValidationError::Empty)
+        ));
     }
 
     #[test]

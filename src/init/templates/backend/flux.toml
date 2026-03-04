@@ -1,2 +1,6 @@
 [project]
 name = "{{name}}"
+
+[dev]
+public_port = 8080
+backend_port = 3001

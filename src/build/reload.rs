@@ -120,7 +120,8 @@ pub async fn ws_reload_handler(
     body: web::Payload,
     reload_tx: web::Data<broadcast::Sender<()>>,
 ) -> Result<HttpResponse, actix_web::Error> {
-    let peer = req.peer_addr()
+    let peer = req
+        .peer_addr()
         .map(|a| a.to_string())
         .unwrap_or_else(|| "unknown".into());
 
@@ -136,10 +137,10 @@ pub async fn ws_reload_handler(
         // Allow connections from the same host (development scenario)
         let expected_origin = format!("http://{}", host);
         let expected_origin_https = format!("https://{}", host);
-        
+
         // Convert HeaderValue to string for comparison
         let origin_str = origin.to_str().unwrap_or("");
-        
+
         if origin_str != expected_origin && origin_str != expected_origin_https {
             tracing::warn!(
                 origin = %origin_str,
@@ -212,37 +213,48 @@ mod tests {
         let result = inject_reload_script(html);
         let script_pos = result.find(RELOAD_SCRIPT).expect("script not found");
         let body_pos = result.find("</body>").expect("</body> not found");
-        assert!(script_pos < body_pos,
+        assert!(
+            script_pos < body_pos,
             "script should be injected before </body>, but script is at {} and </body> is at {}",
-            script_pos, body_pos);
+            script_pos,
+            body_pos
+        );
     }
 
     #[test]
     fn handles_html_without_body_tag_gracefully() {
         let html = "<html><p>No body tag</p></html>";
         let result = inject_reload_script(html);
-        assert!(result.contains(RELOAD_SCRIPT),
-            "script should be appended when </body> is absent");
+        assert!(
+            result.contains(RELOAD_SCRIPT),
+            "script should be appended when </body> is absent"
+        );
     }
 
     #[test]
     fn reload_script_references_ws_reload_path() {
-        assert!(RELOAD_SCRIPT.contains("/ws/reload"),
-            "reload script must reference /ws/reload WebSocket path");
+        assert!(
+            RELOAD_SCRIPT.contains("/ws/reload"),
+            "reload script must reference /ws/reload WebSocket path"
+        );
     }
 
     #[test]
     fn reload_script_contains_onclose_reconnect() {
-        assert!(RELOAD_SCRIPT.contains("onclose"),
-            "reload script must include reconnect logic — see Section 4.3 of spec");
+        assert!(
+            RELOAD_SCRIPT.contains("onclose"),
+            "reload script must include reconnect logic — see Section 4.3 of spec"
+        );
     }
 
     #[test]
     fn inject_reload_script_preserves_original_content() {
         let html = "<html><body><p>Hello World</p></body></html>";
         let result = inject_reload_script(html);
-        assert!(result.contains("<p>Hello World</p>"),
-            "original content should be preserved");
+        assert!(
+            result.contains("<p>Hello World</p>"),
+            "original content should be preserved"
+        );
     }
 
     #[test]
@@ -253,8 +265,10 @@ mod tests {
         // Should inject before the LAST </body>
         let script_pos = result.find(RELOAD_SCRIPT).unwrap();
         // The script should be before the last </body> in the result
-        assert!(script_pos < result.rfind("</body>").unwrap(),
-            "script should be before the last </body>");
+        assert!(
+            script_pos < result.rfind("</body>").unwrap(),
+            "script should be before the last </body>"
+        );
     }
 
     #[test]

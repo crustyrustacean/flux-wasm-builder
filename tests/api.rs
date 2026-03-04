@@ -10,10 +10,8 @@ fn scaffolded_api_mod_imports_status_response() {
         .assert()
         .success();
 
-    let api_mod = std::fs::read_to_string(
-        dir.path().join("test-app/backend/src/api/mod.rs"),
-    )
-    .unwrap();
+    let api_mod =
+        std::fs::read_to_string(dir.path().join("test-app/backend/src/api/mod.rs")).unwrap();
 
     assert!(
         api_mod.contains("StatusResponse"),
@@ -39,10 +37,8 @@ fn scaffolded_api_status_uses_shared_type() {
         .assert()
         .success();
 
-    let api_mod = std::fs::read_to_string(
-        dir.path().join("test-app/backend/src/api/mod.rs"),
-    )
-    .unwrap();
+    let api_mod =
+        std::fs::read_to_string(dir.path().join("test-app/backend/src/api/mod.rs")).unwrap();
 
     assert!(
         api_mod.contains("StatusResponse {"),
@@ -67,10 +63,8 @@ fn scaffolded_shared_lib_has_compile_time_assertions() {
         .assert()
         .success();
 
-    let shared_lib = std::fs::read_to_string(
-        dir.path().join("test-app/shared/src/lib.rs"),
-    )
-    .unwrap();
+    let shared_lib =
+        std::fs::read_to_string(dir.path().join("test-app/shared/src/lib.rs")).unwrap();
 
     assert!(
         shared_lib.contains("assert_serialize"),
@@ -95,10 +89,8 @@ fn scaffolded_shared_lib_has_round_trip_tests() {
         .assert()
         .success();
 
-    let shared_lib = std::fs::read_to_string(
-        dir.path().join("test-app/shared/src/lib.rs"),
-    )
-    .unwrap();
+    let shared_lib =
+        std::fs::read_to_string(dir.path().join("test-app/shared/src/lib.rs")).unwrap();
 
     assert!(
         shared_lib.contains("hello_response_round_trips_through_json"),
@@ -123,10 +115,8 @@ fn scaffolded_shared_cargo_toml_has_serde_json_dev_dependency() {
         .assert()
         .success();
 
-    let cargo_toml = std::fs::read_to_string(
-        dir.path().join("test-app/shared/Cargo.toml"),
-    )
-    .unwrap();
+    let cargo_toml =
+        std::fs::read_to_string(dir.path().join("test-app/shared/Cargo.toml")).unwrap();
 
     assert!(
         cargo_toml.contains("[dev-dependencies]"),
@@ -147,10 +137,8 @@ fn scaffolded_frontend_fetches_api_status() {
         .assert()
         .success();
 
-    let frontend_lib = std::fs::read_to_string(
-        dir.path().join("test-app/frontend/src/lib.rs"),
-    )
-    .unwrap();
+    let frontend_lib =
+        std::fs::read_to_string(dir.path().join("test-app/frontend/src/lib.rs")).unwrap();
 
     assert!(
         frontend_lib.contains("StatusResponse"),
@@ -171,10 +159,8 @@ fn scaffolded_api_responses_use_json_content_type() {
         .assert()
         .success();
 
-    let api_mod = std::fs::read_to_string(
-        dir.path().join("test-app/backend/src/api/mod.rs"),
-    )
-    .unwrap();
+    let api_mod =
+        std::fs::read_to_string(dir.path().join("test-app/backend/src/api/mod.rs")).unwrap();
 
     // Both handlers use HttpResponse::Ok().json(...) which sets application/json
     assert!(

@@ -4,11 +4,11 @@
 mod templates;
 
 // dependencies
-use std::path::Path;
 use crate::env_check::{
-    wasm32_target_installed, wasm_pack_on_path, wasm_pack_version_ok, EnvCheckError,
+    EnvCheckError, wasm_pack_on_path, wasm_pack_version_ok, wasm32_target_installed,
 };
 use crate::validation::validate_project_name;
+use std::path::Path;
 
 /// Error type for project scaffolding failures.
 #[derive(Debug, thiserror::Error)]
@@ -134,7 +134,6 @@ fn write_files(project_root: &Path, name: &str) -> Result<(), InitError> {
             project_root.join("backend/src/main.rs"),
             templates::backend_main_rs().to_string(),
         ),
-        
         (
             project_root.join("backend/src/api/mod.rs"),
             templates::backend_api_mod(name),
@@ -346,7 +345,10 @@ mod tests {
         let contents =
             std::fs::read_to_string(root.path().join("my-app/backend/src/api/mod.rs")).unwrap();
         assert!(contents.contains("StatusResponse"));
-        assert!(!contents.contains("json!"), "should use StatusResponse struct, not json!()");
+        assert!(
+            !contents.contains("json!"),
+            "should use StatusResponse struct, not json!()"
+        );
     }
 
     #[test]
