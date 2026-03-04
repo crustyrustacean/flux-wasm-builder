@@ -123,6 +123,10 @@ fn write_files(project_root: &Path, name: &str) -> Result<(), InitError> {
             templates::backend_cargo_toml(name),
         ),
         (
+            project_root.join("backend/flux.toml"),
+            templates::backend_flux_toml(name),
+        ),
+        (
             project_root.join("backend/build.rs"),
             templates::backend_build_rs().to_string(),
         ),
@@ -199,6 +203,7 @@ mod tests {
         assert!(root.path().join("my-app/.cargo/config.toml").exists());
         assert!(root.path().join("my-app/.gitignore").exists());
         assert!(root.path().join("my-app/backend/Cargo.toml").exists());
+        assert!(root.path().join("my-app/backend/flux.toml").exists());
         assert!(root.path().join("my-app/backend/build.rs").exists());
         assert!(root.path().join("my-app/backend/src/main.rs").exists());
         assert!(root.path().join("my-app/frontend/Cargo.toml").exists());
@@ -240,7 +245,7 @@ mod tests {
     }
 
     #[test]
-    fn frontend_cargo_toml_sets_cdylib_and_pins_yew_021() {
+    fn frontend_cargo_toml_sets_cdylib_and_pins_yew_022() {
         let root = tempdir().unwrap();
         scaffold(root.path(), "my-app").unwrap();
         let contents =

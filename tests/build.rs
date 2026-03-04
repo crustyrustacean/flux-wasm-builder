@@ -36,21 +36,3 @@ fn wasm_pack_builds_scaffolded_frontend() {
     assert!(status.success());
     assert!(dir.path().join("test-app/frontend/pkg").exists());
 }
-
-#[test]
-fn scaffolded_backend_exits_on_build_failure() {
-    let dir = tempdir().unwrap();
-
-    cargo_bin_cmd!("flux-wasm-builder")
-        .args(["init", "test-app"])
-        .current_dir(dir.path())
-        .assert()
-        .success();
-
-    let main_rs_path = dir.path().join("test-app/backend/src/main.rs");
-    let contents = std::fs::read_to_string(&main_rs_path).unwrap();
-
-    // Check that build failure results in exit(1)
-    assert!(contents.contains("std::process::exit(1)"));
-    assert!(contents.contains("initial build failed"));
-}

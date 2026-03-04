@@ -41,6 +41,11 @@ pub fn backend_cargo_toml(name: &str) -> String {
     include_str!("templates/backend/cargo.toml").replace("{{name}}", name)
 }
 
+/// Backend flux.toml
+pub fn backend_flux_toml(name: &str) -> String {
+    include_str!("templates/backend/flux.toml").replace("{{name}}", name)
+}
+
 /// Backend build.rs
 pub fn backend_build_rs() -> &'static str {
     include_str!("templates/backend/build.rs")
