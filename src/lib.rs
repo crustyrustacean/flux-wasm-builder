@@ -2,6 +2,7 @@
 
 // module declarations
 pub mod build;
+pub mod domain;
 pub mod env_check;
 pub mod init;
 pub mod validation;
