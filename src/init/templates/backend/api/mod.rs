@@ -9,6 +9,12 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
     );
 }
 
+async fn hello() -> impl Responder {
+    HttpResponse::Ok().json(HelloResponse {
+        message: "Hello from {{project_name}}!".to_string(),
+    })
+}
+
 async fn health_check() -> impl Responder {
     HttpResponse::Ok().finish()
 }

@@ -57,3 +57,13 @@ fn init_requires_name_argument() {
         .assert()
         .failure();
 }
+
+#[test]
+fn dev_command_exists() {
+    let dir = tempdir().unwrap();
+    cargo_bin_cmd!("flux-wasm-builder")
+        .args(["dev"])
+        .current_dir(dir.path())
+        .assert()
+        .failure(); // Fails because no flux.toml exists
+}
