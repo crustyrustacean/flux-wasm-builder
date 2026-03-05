@@ -56,6 +56,13 @@ pub async fn run() -> Result<(), DevError> {
 
     let reload_tx_clone = reload_tx.clone();
     let build_config = BuildConfig::new(std::env::current_dir()?.join("frontend"));
+    println!("Building frontend...");
+    run_wasm_pack(&build_config).await.map_err(|_| {
+        DevError::Io(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "initial wasm-pack build failed",
+        ))
+    })?;
     let build_config_for_serve = build_config.clone(); // ← clone before it moves into the spawn
     tokio::spawn(async move {
         run_build_loop(build_rx, reload_tx_clone, move || {
@@ -98,7 +105,10 @@ impl ProcessManager {
 
     async fn wait_for_ready(config: &FluxConfig) -> Result<(), DevError> {
         let http_client = Client::new();
-        let url = format!("http://localhost:{}/api/health", config.dev.backend_port);
+        let url = format!(
+            "http://localhost:{}/api/health_check",
+            config.dev.backend_port
+        );
 
         let max_attempts = 30;
         let mut attempts = 0;

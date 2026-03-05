@@ -100,6 +100,7 @@ pub async fn run_build_loop<F, Fut>(
             Err(ref e) => {
                 // Build failure is NOT fatal to the loop — continue watching
                 tracing::warn!(parent: &span, error = %e, "rebuild failed — previous assets still served");
+                pending = false;
             }
         }
 

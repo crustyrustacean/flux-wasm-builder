@@ -4,3 +4,4 @@ name = "{{name}}"
 [dev]
 public_port = 8080
 backend_port = 3001
+watch_debounce_ms = 300
