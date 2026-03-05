@@ -76,6 +76,34 @@ pub async fn run() -> Result<(), DevError> {
         }
     });
 
+    let (styles_tx, mut styles_rx) = tokio::sync::mpsc::channel::<()>(8);
+    let styles_watch_path = std::env::current_dir()?.join("frontend/styles");
+    let _styles_watcher = start_watcher(
+        &styles_watch_path,
+        config.dev.watch_debounce_ms,
+        styles_tx,
+        Some(&["scss"]),
+    )?;
+
+    let reload_tx_for_styles = reload_tx.clone();
+    let css_bytes_for_styles = css_bytes.clone();
+    tokio::spawn(async move {
+        while let Some(()) = styles_rx.recv().await {
+            let styles_path = std::env::current_dir()
+                .expect("failed to get current dir")
+                .join("frontend/styles");
+            match compile_scss(&styles_path) {
+                Ok(new_css) => {
+                    *css_bytes_for_styles.write().unwrap() = new_css;
+                    let _ = reload_tx_for_styles.send(());
+                }
+                Err(e) => {
+                    tracing::warn!(error = %e, "SCSS compilation failed — previous styles still served");
+                }
+            }
+        }
+    });
+
     let reload_tx_clone = reload_tx.clone();
     let build_config = BuildConfig::new(std::env::current_dir()?.join("frontend"));
     println!("Building frontend...");
