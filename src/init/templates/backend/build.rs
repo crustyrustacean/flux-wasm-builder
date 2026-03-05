@@ -18,5 +18,13 @@ fn main() {
                  flux-wasm-builder release\n\n"
             );
         }
+
+        let public = std::path::Path::new("../frontend/public");
+        if !public.exists() {
+            panic!(
+                "\n\nembedding assets requires frontend/public/ to exist.\n\
+                 Create it first, even if empty.\n\n"
+            );
+        }
     }
 }

@@ -54,6 +54,21 @@ pub async fn run() -> Result<(), DevError> {
         restart_tx,
     )?;
 
+    let (public_tx, mut public_rx) = tokio::sync::mpsc::channel::<()>(8);
+    let public_watch_path = std::env::current_dir()?.join("frontend/public");
+    let _public_watcher = start_watcher(
+        &public_watch_path,
+        config.dev.watch_debounce_ms,
+        public_tx,
+    )?;
+
+    let reload_tx_for_public = reload_tx.clone();
+    tokio::spawn(async move {
+        while let Some(()) = public_rx.recv().await {
+            let _ = reload_tx_for_public.send(());
+        }
+    });
+
     let reload_tx_clone = reload_tx.clone();
     let build_config = BuildConfig::new(std::env::current_dir()?.join("frontend"));
     println!("Building frontend...");

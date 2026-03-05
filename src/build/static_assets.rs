@@ -12,7 +12,7 @@
 //! In release mode (with `embed-assets` feature), assets are embedded
 //! directly into the binary at compile time using `include_dir`.
 
-use actix_web::{HttpResponse, Responder, web};
+use actix_web::{HttpRequest, HttpResponse, Responder, web};
 
 use super::DevMode;
 use super::wasm_pack::BuildConfig;
@@ -145,6 +145,8 @@ pub async fn serve_pkg_file(
 /// This enables client-side routing in the Yew frontend.
 /// Any route not matched by API or static asset handlers will receive index.html.
 ///
+/// If the request path matches a file in `public/`, that file is served instead.
+///
 /// In development mode (`DevMode(true)`), the reload script is injected
 /// into the HTML before serving to enable live reload.
 ///
@@ -152,12 +154,42 @@ pub async fn serve_pkg_file(
 /// Reads index.html from the filesystem and injects reload script.
 #[cfg(not(feature = "embed-assets"))]
 pub async fn spa_fallback(
+    req: HttpRequest,
     config: web::Data<BuildConfig>,
     dev_mode: web::Data<DevMode>,
 ) -> impl Responder {
     let span = tracing::debug_span!("spa_fallback");
     let _enter = span.enter();
 
+    // Check if the path matches a file in public/
+    let req_path = req.path().trim_start_matches('/');
+    if !req_path.is_empty() {
+        let safe_name = match std::path::Path::new(req_path).file_name() {
+            Some(n) => n.to_owned(),
+            None => {
+                tracing::warn!(path = %req_path, "path traversal attempt blocked in public/");
+                return HttpResponse::BadRequest().finish();
+            }
+        };
+        let public_file = config.public_path.join(&safe_name);
+        if public_file.exists() {
+            match tokio::fs::read(&public_file).await {
+                Ok(bytes) => {
+                    let mime = mime_guess::from_path(&safe_name).first_or_octet_stream();
+                    tracing::debug!(path = %public_file.display(), "serving public file");
+                    return HttpResponse::Ok()
+                        .content_type(mime.to_string())
+                        .body(bytes);
+                }
+                Err(e) => {
+                    tracing::error!(error = %e, "failed to read public file");
+                    return HttpResponse::InternalServerError().finish();
+                }
+            }
+        }
+    }
+
+    // Fall through to index.html
     match tokio::fs::read(&config.index_html_path).await {
         Ok(bytes) => {
             tracing::debug!(path = %config.index_html_path.display(), "serving index.html");
@@ -193,6 +225,7 @@ pub async fn spa_fallback(
 /// No reload script is injected.
 #[cfg(feature = "embed-assets")]
 pub async fn spa_fallback(
+    _req: HttpRequest,
     _config: web::Data<BuildConfig>,
     _dev_mode: web::Data<DevMode>,
 ) -> impl Responder {
@@ -308,15 +341,18 @@ mod tests {
         let dir = tempdir().unwrap();
         let index = dir.path().join("index.html");
         std::fs::write(&index, b"<html></html>").unwrap();
+        let public = dir.path().join("public");
+        std::fs::create_dir(&public).unwrap();
         let config = BuildConfig {
             index_html_path: index,
+            public_path: public,
             ..BuildConfig::new("/unused")
         };
         let app = test::init_service(
             App::new()
                 .app_data(web::Data::new(config))
                 .app_data(web::Data::new(DevMode(false)))
-                .default_service(web::get().to(spa_fallback)),
+                .default_service(web::to(spa_fallback)),
         )
         .await;
         let req = test::TestRequest::get()
@@ -337,8 +373,11 @@ mod tests {
     async fn api_route_takes_precedence_over_spa_fallback() {
         let dir = tempdir().unwrap();
         std::fs::write(dir.path().join("index.html"), b"<html></html>").unwrap();
+        let public = dir.path().join("public");
+        std::fs::create_dir(&public).unwrap();
         let config = BuildConfig {
             index_html_path: dir.path().join("index.html"),
+            public_path: public,
             ..BuildConfig::new("/unused")
         };
         async fn hello() -> impl actix_web::Responder {
@@ -349,7 +388,7 @@ mod tests {
                 .app_data(web::Data::new(config))
                 .app_data(web::Data::new(DevMode(false)))
                 .route("/api/hello", web::get().to(hello))
-                .default_service(web::get().to(spa_fallback)),
+                .default_service(web::to(spa_fallback)),
         )
         .await;
         let req = test::TestRequest::get().uri("/api/hello").to_request();
@@ -371,15 +410,18 @@ mod tests {
         let dir = tempdir().unwrap();
         let index = dir.path().join("index.html");
         std::fs::write(&index, b"<html><body></body></html>").unwrap();
+        let public = dir.path().join("public");
+        std::fs::create_dir(&public).unwrap();
         let config = BuildConfig {
             index_html_path: index,
+            public_path: public,
             ..BuildConfig::new("/unused")
         };
         let app = test::init_service(
             App::new()
                 .app_data(web::Data::new(config))
                 .app_data(web::Data::new(DevMode(true)))
-                .default_service(web::get().to(spa_fallback)),
+                .default_service(web::to(spa_fallback)),
         )
         .await;
         let body = test::read_body(
@@ -397,15 +439,18 @@ mod tests {
         let dir = tempdir().unwrap();
         let index = dir.path().join("index.html");
         std::fs::write(&index, b"<html><body></body></html>").unwrap();
+        let public = dir.path().join("public");
+        std::fs::create_dir(&public).unwrap();
         let config = BuildConfig {
             index_html_path: index,
+            public_path: public,
             ..BuildConfig::new("/unused")
         };
         let app = test::init_service(
             App::new()
                 .app_data(web::Data::new(config))
                 .app_data(web::Data::new(DevMode(false)))
-                .default_service(web::get().to(spa_fallback)),
+                .default_service(web::to(spa_fallback)),
         )
         .await;
         let body = test::read_body(
@@ -416,6 +461,106 @@ mod tests {
             !std::str::from_utf8(&body).unwrap().contains("/ws/reload"),
             "index.html should not contain reload script in release mode"
         );
+    }
+
+    #[actix_web::test]
+    async fn serves_file_from_public_directory() {
+        let dir = tempdir().unwrap();
+        let public = dir.path().join("public");
+        std::fs::create_dir(&public).unwrap();
+        std::fs::write(public.join("favicon.ico"), b"fake ico").unwrap();
+        std::fs::write(dir.path().join("index.html"), b"<html></html>").unwrap();
+        let config = BuildConfig {
+            public_path: public,
+            index_html_path: dir.path().join("index.html"),
+            ..BuildConfig::new("/unused")
+        };
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(config))
+                .app_data(web::Data::new(DevMode(false)))
+                .default_service(web::to(spa_fallback)),
+        )
+        .await;
+        let req = test::TestRequest::get().uri("/favicon.ico").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(), 200);
+        let body = test::read_body(resp).await;
+        assert_eq!(body.as_ref(), b"fake ico");
+    }
+
+    #[actix_web::test]
+    async fn public_file_takes_precedence_over_spa_fallback() {
+        let dir = tempdir().unwrap();
+        let public = dir.path().join("public");
+        std::fs::create_dir(&public).unwrap();
+        std::fs::write(public.join("robots.txt"), b"User-agent: *").unwrap();
+        std::fs::write(dir.path().join("index.html"), b"<html></html>").unwrap();
+        let config = BuildConfig {
+            public_path: public,
+            index_html_path: dir.path().join("index.html"),
+            ..BuildConfig::new("/unused")
+        };
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(config))
+                .app_data(web::Data::new(DevMode(false)))
+                .default_service(web::to(spa_fallback)),
+        )
+        .await;
+        let req = test::TestRequest::get().uri("/robots.txt").to_request();
+        let resp = test::call_service(&app, req).await;
+        let ct = resp.headers().get("content-type").unwrap().to_str().unwrap();
+        assert!(!ct.contains("text/html"), "robots.txt should not return index.html");
+    }
+
+    #[actix_web::test]
+    async fn unknown_path_falls_through_to_index_html() {
+        let dir = tempdir().unwrap();
+        let public = dir.path().join("public");
+        std::fs::create_dir(&public).unwrap();
+        std::fs::write(dir.path().join("index.html"), b"<html></html>").unwrap();
+        let config = BuildConfig {
+            public_path: public,
+            index_html_path: dir.path().join("index.html"),
+            ..BuildConfig::new("/unused")
+        };
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(config))
+                .app_data(web::Data::new(DevMode(false)))
+                .default_service(web::to(spa_fallback)),
+        )
+        .await;
+        let req = test::TestRequest::get().uri("/some/spa/route").to_request();
+        let resp = test::call_service(&app, req).await;
+        let ct = resp.headers().get("content-type").unwrap().to_str().unwrap();
+        assert!(ct.contains("text/html"), "SPA route should return index.html");
+    }
+
+    #[actix_web::test]
+    async fn serves_public_file_with_correct_mime_type() {
+        let dir = tempdir().unwrap();
+        let public = dir.path().join("public");
+        std::fs::create_dir(&public).unwrap();
+        std::fs::write(public.join("logo.png"), b"\x89PNG").unwrap();
+        std::fs::write(dir.path().join("index.html"), b"<html></html>").unwrap();
+        let config = BuildConfig {
+            public_path: public,
+            index_html_path: dir.path().join("index.html"),
+            ..BuildConfig::new("/unused")
+        };
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(config))
+                .app_data(web::Data::new(DevMode(false)))
+                .default_service(web::to(spa_fallback)),
+        )
+        .await;
+        let req = test::TestRequest::get().uri("/logo.png").to_request();
+        let resp = test::call_service(&app, req).await;
+        let ct = resp.headers().get("content-type").unwrap().to_str().unwrap();
+        assert!(ct.contains("image/png"), "png should have image/png content-type, got {ct}");
     }
 }
 

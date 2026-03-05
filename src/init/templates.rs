@@ -96,6 +96,15 @@ pub fn frontend_screen_scss() -> &'static str {
 }
 
 // =============================================================================
+// Frontend Public Templates
+// =============================================================================
+
+/// Empty .gitkeep for frontend/public/ so the directory is tracked by git
+pub fn frontend_public_gitkeep() -> &'static str {
+    ""
+}
+
+// =============================================================================
 // Shared Templates
 // =============================================================================
 

@@ -90,6 +90,7 @@ fn create_dirs(project_root: &Path) -> Result<(), InitError> {
         project_root.join("backend/src/api"),
         project_root.join("frontend/src"),
         project_root.join("frontend/styles"),
+        project_root.join("frontend/public"),
         project_root.join("shared/src"),
     ];
 
@@ -159,6 +160,10 @@ fn write_files(project_root: &Path, name: &str) -> Result<(), InitError> {
         (
             project_root.join("frontend/styles/screen.scss"),
             templates::frontend_screen_scss().to_string(),
+        ),
+        (
+            project_root.join("frontend/public/.gitkeep"),
+            templates::frontend_public_gitkeep().to_string(),
         ),
         // Shared
         (
