@@ -14,6 +14,8 @@ pub enum ReleaseError {
     WasmPackFailed,
     #[error("cargo build failed")]
     CargoFailed,
+    #[error("scss compilation failed: {0}")]
+    ScssFailed(String),
     #[error("io error: {0}")]
     Io(#[from] std::io::Error),
 }
@@ -27,6 +29,14 @@ pub async fn run() -> Result<(), ReleaseError> {
     run_wasm_pack(&build_config)
         .await
         .map_err(|_| ReleaseError::WasmPackFailed)?;
+
+    println!("Compiling styles...");
+    let styles_path = std::env::current_dir()?.join("frontend/styles");
+    let css = grass::from_path(
+        &styles_path.join("screen.scss"),
+        &grass::Options::default(),
+    ).map_err(|e| ReleaseError::ScssFailed(e.to_string()))?;
+    std::fs::write(styles_path.join("screen.css"), css)?;
 
     println!("Building backend...");
     let status = Command::new("cargo")
