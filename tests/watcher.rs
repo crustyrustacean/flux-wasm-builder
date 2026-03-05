@@ -50,7 +50,8 @@ fn non_rs_file_does_not_trigger_build_signal() {
     std::fs::create_dir(&src).unwrap();
 
     let (tx, mut rx) = mpsc::channel(8);
-    let _watcher = start_watcher(dir.path(), 50, tx).expect("watcher should start");
+    // Watch the `src` subdirectory so is_src_dir = true (only .rs files trigger)
+    let _watcher = start_watcher(&src, 50, tx).expect("watcher should start");
 
     // Wait for watcher to initialize
     std::thread::sleep(Duration::from_millis(200));
@@ -81,7 +82,8 @@ fn dropping_watcher_stops_events() {
 
     let (tx, mut rx) = mpsc::channel(8);
 
-    let watcher = start_watcher(dir.path(), 50, tx).expect("watcher should start");
+    // Watch the `src` subdirectory so is_src_dir = true (only .rs files trigger)
+    let watcher = start_watcher(&src, 50, tx).expect("watcher should start");
 
     // Wait for watcher to initialize
     std::thread::sleep(Duration::from_millis(200));
@@ -89,8 +91,8 @@ fn dropping_watcher_stops_events() {
     // Drop the watcher
     drop(watcher);
 
-    // Wait a bit for cleanup
-    std::thread::sleep(Duration::from_millis(100));
+    // Wait for the watcher background thread to fully terminate so tx is dropped
+    std::thread::sleep(Duration::from_millis(500));
 
     // Modify a file
     std::fs::write(src.join("lib.rs"), b"// change after drop").unwrap();
