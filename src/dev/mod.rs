@@ -45,13 +45,19 @@ pub async fn run() -> Result<(), DevError> {
     let (restart_tx, mut restart_rx) = tokio::sync::mpsc::channel::<()>(8);
 
     let watch_path = std::env::current_dir()?.join("frontend/src");
-    let _frontend_watcher = start_watcher(&watch_path, config.dev.watch_debounce_ms, build_tx)?;
+    let _frontend_watcher = start_watcher(
+        &watch_path,
+        config.dev.watch_debounce_ms,
+        build_tx,
+        Some(&["rs"]),
+    )?;
 
     let backend_watch_path = std::env::current_dir()?.join("backend/src");
     let _backend_watcher = start_watcher(
         &backend_watch_path,
         config.dev.watch_debounce_ms,
         restart_tx,
+        Some(&["rs"]),
     )?;
 
     let (public_tx, mut public_rx) = tokio::sync::mpsc::channel::<()>(8);
@@ -60,6 +66,7 @@ pub async fn run() -> Result<(), DevError> {
         &public_watch_path,
         config.dev.watch_debounce_ms,
         public_tx,
+        None,
     )?;
 
     let reload_tx_for_public = reload_tx.clone();
