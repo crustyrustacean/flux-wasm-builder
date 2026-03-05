@@ -3,15 +3,31 @@ name = "{{name}}-backend"
 version.workspace = true
 edition.workspace = true
 
+[[bin]]
+name = "{{name}}-backend"
+path = "src/bin/main.rs"
+
+[lib]
+path = "src/lib.rs"
+
 [dependencies]
 actix-web = "4"
-tokio = { version = "1", features = ["full"] }
+anyhow = "1"
+config = { version = "0.15", default-features = false, features = ["yaml"] }
+serde = { version = "1", features = ["derive"] }
+serde-aux = "4"
 serde_json = "1"
-mime_guess = "2"
+thiserror = "2"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-thiserror = "2.0.18"
+tracing-actix-web = "0.7"
+tracing-log = "0.2"
+tracing-subscriber = { version = "0.3", features = ["registry", "env-filter"] }
+mime_guess = "2"
 {{name}}-shared = { path = "../shared" }
+
+[dev-dependencies]
+reqwest = { version = "0.13", features = ["json"] }
 
 [features]
 embed-assets = ["dep:include_dir"]
