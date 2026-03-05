@@ -4,6 +4,7 @@
 use clap::{Parser, Subcommand};
 use flux_wasm_builder::dev;
 use flux_wasm_builder::init::scaffold;
+use flux_wasm_builder::release;
 use std::path::PathBuf;
 
 #[derive(Parser)]
@@ -26,6 +27,9 @@ enum Commands {
 
     /// Launch the development server to build the project
     Dev,
+
+    /// Build a release binary of the final project
+    Release,
 }
 
 async fn run(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
@@ -36,6 +40,10 @@ async fn run(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
 
         Commands::Dev => {
             dev::run().await?;
+        }
+
+        Commands::Release => {
+            release::run().await?;
         }
     }
     Ok(())

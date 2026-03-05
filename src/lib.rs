@@ -6,6 +6,7 @@ pub mod dev;
 pub mod domain;
 pub mod env_check;
 pub mod init;
+pub mod release;
 pub mod validation;
 
 // Re-exports for convenience

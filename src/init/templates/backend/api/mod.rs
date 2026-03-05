@@ -4,15 +4,9 @@ use {{crate_name}}_shared::{HelloResponse, StatusResponse};
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/api")
-            .route("/hello", web::get().to(hello))
+            .route("/health_check", web::get().to(health_check))
             .route("/status", web::get().to(status))
     );
-}
-
-async fn hello() -> impl Responder {
-    HttpResponse::Ok().json(HelloResponse {
-        message: "Hello from {{project_name}}!".to_string(),
-    })
 }
 
 async fn health_check() -> impl Responder {

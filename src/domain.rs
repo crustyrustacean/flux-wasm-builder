@@ -118,7 +118,10 @@ name = "minimal"
     fn flux_config_missing_file_returns_error() {
         let result = FluxConfig::from_file(&PathBuf::from("/nonexistent/flux.toml"));
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), ConfigError::ReadFailed { .. }));
+        assert!(matches!(
+            result.unwrap_err(),
+            ConfigError::ReadFailed { .. }
+        ));
     }
 
     #[test]
@@ -129,7 +132,10 @@ name = "minimal"
 
         let result = FluxConfig::from_file(&config_path);
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), ConfigError::ParseFailed { .. }));
+        assert!(matches!(
+            result.unwrap_err(),
+            ConfigError::ParseFailed { .. }
+        ));
     }
 
     #[test]

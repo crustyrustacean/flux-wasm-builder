@@ -22,20 +22,21 @@
 //!   When this feature is active, the reload module and file watcher are
 //!   compiled out, and assets are served from embedded data.
 
-mod build;
 mod build_coordinator;
+pub mod scss;
 mod static_assets;
+pub mod wasm_pack;
 mod watcher;
 
 // Reload module is only needed in dev mode (not embed-assets)
 #[cfg(not(feature = "embed-assets"))]
 mod reload;
 
-pub use build::{
-    BuildConfig, BuildError, run_command_with_timeout, run_wasm_pack, run_wasm_pack_with_env,
-};
 pub use build_coordinator::run_build_loop;
 pub use static_assets::{serve_pkg_file, spa_fallback};
+pub use wasm_pack::{
+    BuildConfig, BuildError, run_command_with_timeout, run_wasm_pack, run_wasm_pack_with_env,
+};
 pub use watcher::{FileWatcher, start_watcher};
 
 // Only export reload functionality in dev mode

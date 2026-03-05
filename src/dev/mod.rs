@@ -1,11 +1,18 @@
 // src/dev/mod.rs
 
 // dependencies
-use crate::build::{BuildConfig, run_build_loop, run_wasm_pack, start_watcher};
+use crate::build::{BuildConfig, run_build_loop, run_wasm_pack, scss::compile_scss, start_watcher};
+use crate::dev::server::serve;
 use crate::domain::{ConfigError, FluxConfig};
 use reqwest::Client;
 use std::process::{Child, Command};
+use std::sync::{Arc, RwLock};
 use tokio::time::Duration;
+
+// module declarations
+pub mod proxy;
+pub mod server;
+pub mod styles;
 
 #[derive(Debug, thiserror::Error)]
 pub enum DevError {
@@ -25,15 +32,31 @@ pub enum DevError {
 pub async fn run() -> Result<(), DevError> {
     let config_path = std::env::current_dir()?.join("flux.toml");
     let config = FluxConfig::from_file(&config_path)?;
-    let _process_handle = ProcessManager::new(&config)?;
+
+    let styles_path = std::env::current_dir()?.join("frontend/styles");
+    let initial_css = compile_scss(&styles_path).unwrap_or_default();
+    let css_bytes: Arc<RwLock<Vec<u8>>> = Arc::new(RwLock::new(initial_css));
+
+    let mut process_manager = ProcessManager::new(&config)?;
     ProcessManager::wait_for_ready(&config).await?;
+
     let (build_tx, build_rx) = tokio::sync::mpsc::channel::<()>(8);
-    let (reload_tx, _reload_rx) = tokio::sync::broadcast::channel::<()>(16);
+    let (reload_tx, _reload_rx) = tokio::sync::broadcast::channel::<()>(16); // ← remove the underscore from _reload_rx
+    let (restart_tx, mut restart_rx) = tokio::sync::mpsc::channel::<()>(8);
+
     let watch_path = std::env::current_dir()?.join("frontend/src");
-    let _watcher = start_watcher(&watch_path, config.dev.watch_debounce_ms, build_tx)?;
+    let _frontend_watcher = start_watcher(&watch_path, config.dev.watch_debounce_ms, build_tx)?;
+
+    let backend_watch_path = std::env::current_dir()?.join("backend/src");
+    let _backend_watcher = start_watcher(
+        &backend_watch_path,
+        config.dev.watch_debounce_ms,
+        restart_tx,
+    )?;
 
     let reload_tx_clone = reload_tx.clone();
     let build_config = BuildConfig::new(std::env::current_dir()?.join("frontend"));
+    let build_config_for_serve = build_config.clone(); // ← clone before it moves into the spawn
     tokio::spawn(async move {
         run_build_loop(build_rx, reload_tx_clone, move || {
             let config = build_config.clone();
@@ -41,6 +64,19 @@ pub async fn run() -> Result<(), DevError> {
         })
         .await;
     });
+
+    let restart_config = config.clone();
+    tokio::spawn(async move {
+        while let Some(()) = restart_rx.recv().await {
+            if let Err(e) = process_manager.restart(&restart_config).await {
+                eprintln!("Failed to restart backend: {e}");
+            }
+        }
+    });
+
+    // ← replaces Ok(())
+    serve(&config, build_config_for_serve, reload_tx, css_bytes).await?;
+
     Ok(())
 }
 
@@ -52,6 +88,7 @@ impl ProcessManager {
     fn new(config: &FluxConfig) -> Result<Self, DevError> {
         let child = Command::new("cargo")
             .args(["run", "-p", &format!("{}-backend", config.project.name)])
+            .env("FLUX_BACKEND_PORT", config.dev.backend_port.to_string())
             .spawn()?;
 
         Ok(Self {
@@ -80,5 +117,25 @@ impl ProcessManager {
 
             attempts += 1;
         }
+    }
+
+    async fn restart(&mut self, config: &FluxConfig) -> Result<(), DevError> {
+        // Kill and reap the existing process
+        if let Some(child) = self.handle.as_mut() {
+            child.kill()?;
+            child.wait()?;
+        }
+
+        // Respawn
+        let child = Command::new("cargo")
+            .args(["run", "-p", &format!("{}-backend", config.project.name)])
+            .spawn()?;
+
+        self.handle = Some(child);
+
+        // Wait for it to be ready again
+        Self::wait_for_ready(config).await?;
+
+        Ok(())
     }
 }

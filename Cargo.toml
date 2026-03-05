@@ -1,6 +1,6 @@
 [package]
 name = "flux-wasm-builder"
-version = "0.12.1"
+version = "0.13.0"
 edition = "2024"
 
 [[bin]]
@@ -24,6 +24,7 @@ notify-debouncer-mini = "0.7"
 serde = { version = "1.0.228", features = ["derive"] }
 toml = "1.0.3"
 reqwest = "0.13.2"
+grass = "0.13.4"
 
 [dependencies.include_dir]
 version = "0.7"

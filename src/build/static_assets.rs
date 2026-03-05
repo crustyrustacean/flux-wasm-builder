@@ -15,7 +15,7 @@
 use actix_web::{HttpResponse, Responder, web};
 
 use super::DevMode;
-use super::build::BuildConfig;
+use super::wasm_pack::BuildConfig;
 
 // Dev-mode only import for reload script injection
 #[cfg(not(feature = "embed-assets"))]

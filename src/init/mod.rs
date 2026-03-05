@@ -89,6 +89,7 @@ fn create_dirs(project_root: &Path) -> Result<(), InitError> {
         project_root.join(".cargo"),
         project_root.join("backend/src/api"),
         project_root.join("frontend/src"),
+        project_root.join("frontend/styles"),
         project_root.join("shared/src"),
     ];
 
@@ -123,7 +124,7 @@ fn write_files(project_root: &Path, name: &str) -> Result<(), InitError> {
             templates::backend_cargo_toml(name),
         ),
         (
-            project_root.join("backend/flux.toml"),
+            project_root.join("flux.toml"),
             templates::backend_flux_toml(name),
         ),
         (
@@ -150,6 +151,10 @@ fn write_files(project_root: &Path, name: &str) -> Result<(), InitError> {
         (
             project_root.join("frontend/src/lib.rs"),
             templates::frontend_lib_rs(name),
+        ),
+        (
+            project_root.join("frontend/styles/screen.scss"),
+            templates::frontend_screen_scss().to_string(),
         ),
         // Shared
         (
@@ -185,7 +190,7 @@ fn print_success(name: &str) {
     println!();
     println!("Next steps:");
     println!("  cd {name}");
-    println!("  cargo backend");
+    println!("  flux-wasm-builder dev");
 }
 
 #[cfg(test)]
@@ -202,7 +207,7 @@ mod tests {
         assert!(root.path().join("my-app/.cargo/config.toml").exists());
         assert!(root.path().join("my-app/.gitignore").exists());
         assert!(root.path().join("my-app/backend/Cargo.toml").exists());
-        assert!(root.path().join("my-app/backend/flux.toml").exists());
+        assert!(root.path().join("my-app/flux.toml").exists());
         assert!(root.path().join("my-app/backend/build.rs").exists());
         assert!(root.path().join("my-app/backend/src/main.rs").exists());
         assert!(root.path().join("my-app/frontend/Cargo.toml").exists());

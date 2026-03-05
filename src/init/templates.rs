@@ -85,6 +85,11 @@ pub fn frontend_lib_rs(name: &str) -> String {
     include_str!("templates/frontend/lib.rs").replace("{{crate_name}}", &crate_name)
 }
 
+/// Frontend screen.scss
+pub fn frontend_screen_scss() -> &'static str {
+    include_str!("templates/frontend/styles/screen.scss")
+}
+
 // =============================================================================
 // Shared Templates
 // =============================================================================
