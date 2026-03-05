@@ -14,12 +14,22 @@ async fn styles_handler_returns_200_with_css_content_type() {
     )
     .await;
 
-    let req = test::TestRequest::get().uri("/styles/screen.css").to_request();
+    let req = test::TestRequest::get()
+        .uri("/styles/screen.css")
+        .to_request();
     let resp = test::call_service(&app, req).await;
 
     assert_eq!(resp.status(), 200);
-    let ct = resp.headers().get("content-type").unwrap().to_str().unwrap();
-    assert!(ct.contains("text/css"), "content-type should be text/css, got {ct}");
+    let ct = resp
+        .headers()
+        .get("content-type")
+        .unwrap()
+        .to_str()
+        .unwrap();
+    assert!(
+        ct.contains("text/css"),
+        "content-type should be text/css, got {ct}"
+    );
 }
 
 #[actix_web::test]
@@ -33,7 +43,9 @@ async fn styles_handler_returns_correct_bytes() {
     )
     .await;
 
-    let req = test::TestRequest::get().uri("/styles/screen.css").to_request();
+    let req = test::TestRequest::get()
+        .uri("/styles/screen.css")
+        .to_request();
     let body = test::read_body(test::call_service(&app, req).await).await;
 
     assert_eq!(body.as_ref(), expected.as_slice());
@@ -54,7 +66,9 @@ async fn styles_handler_reflects_updated_css() {
     // Update the CSS in the shared state
     *css_writer.write().unwrap() = b"body { background: blue; }".to_vec();
 
-    let req = test::TestRequest::get().uri("/styles/screen.css").to_request();
+    let req = test::TestRequest::get()
+        .uri("/styles/screen.css")
+        .to_request();
     let body = test::read_body(test::call_service(&app, req).await).await;
 
     assert!(

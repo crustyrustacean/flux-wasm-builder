@@ -13,13 +13,20 @@ fn compile_scss_with_variables() {
     .unwrap();
     let result = compile_scss(dir.path()).unwrap();
     let css = std::str::from_utf8(&result).unwrap();
-    assert!(css.contains("#333") || css.contains("333"), "SCSS variable should be resolved");
+    assert!(
+        css.contains("#333") || css.contains("333"),
+        "SCSS variable should be resolved"
+    );
 }
 
 #[test]
 fn compile_scss_with_imports() {
     let dir = tempdir().unwrap();
-    std::fs::write(dir.path().join("_base.scss"), "* { box-sizing: border-box; }").unwrap();
+    std::fs::write(
+        dir.path().join("_base.scss"),
+        "* { box-sizing: border-box; }",
+    )
+    .unwrap();
     std::fs::write(dir.path().join("screen.scss"), "@use 'base';").unwrap();
     let result = compile_scss(dir.path());
     // Should compile without error

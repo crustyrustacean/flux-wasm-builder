@@ -50,7 +50,10 @@ mod tests {
         .unwrap();
         let result = compile_scss(dir.path()).unwrap();
         let css = std::str::from_utf8(&result).unwrap();
-        assert!(css.contains(".parent .child"), "nested SCSS should be expanded");
+        assert!(
+            css.contains(".parent .child"),
+            "nested SCSS should be expanded"
+        );
     }
 
     #[test]
@@ -64,7 +67,11 @@ mod tests {
     #[test]
     fn compile_scss_fails_for_invalid_scss() {
         let dir = tempdir().unwrap();
-        std::fs::write(dir.path().join("screen.scss"), "this is not valid scss }{}{").unwrap();
+        std::fs::write(
+            dir.path().join("screen.scss"),
+            "this is not valid scss }{}{",
+        )
+        .unwrap();
         let result = compile_scss(dir.path());
         assert!(matches!(result, Err(ScssError::CompileFailed(_))));
     }

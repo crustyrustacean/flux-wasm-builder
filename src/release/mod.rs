@@ -32,10 +32,8 @@ pub async fn run() -> Result<(), ReleaseError> {
 
     println!("Compiling styles...");
     let styles_path = std::env::current_dir()?.join("frontend/styles");
-    let css = grass::from_path(
-        styles_path.join("screen.scss"),
-        &grass::Options::default(),
-    ).map_err(|e| ReleaseError::ScssFailed(e.to_string()))?;
+    let css = grass::from_path(styles_path.join("screen.scss"), &grass::Options::default())
+        .map_err(|e| ReleaseError::ScssFailed(e.to_string()))?;
     std::fs::write(styles_path.join("screen.css"), css)?;
 
     println!("Building backend...");

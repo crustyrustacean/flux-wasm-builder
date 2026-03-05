@@ -214,7 +214,11 @@ mod tests {
         assert!(root.path().join("my-app/flux.toml").exists());
         assert!(root.path().join("my-app/backend/build.rs").exists());
         assert!(root.path().join("my-app/backend/src/main.rs").exists());
-        assert!(root.path().join("my-app/backend/src/static_assets.rs").exists());
+        assert!(
+            root.path()
+                .join("my-app/backend/src/static_assets.rs")
+                .exists()
+        );
         assert!(root.path().join("my-app/frontend/Cargo.toml").exists());
         assert!(root.path().join("my-app/frontend/src/lib.rs").exists());
         assert!(root.path().join("my-app/frontend/index.html").exists());

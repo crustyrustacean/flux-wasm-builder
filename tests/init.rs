@@ -68,7 +68,11 @@ fn init_creates_styles_directory_and_screen_scss() {
         .success();
 
     assert!(dir.path().join("test-app/frontend/styles").exists());
-    assert!(dir.path().join("test-app/frontend/styles/screen.scss").exists());
+    assert!(
+        dir.path()
+            .join("test-app/frontend/styles/screen.scss")
+            .exists()
+    );
 }
 
 #[test]
@@ -80,7 +84,11 @@ fn init_creates_static_assets_rs() {
         .assert()
         .success();
 
-    assert!(dir.path().join("test-app/backend/src/static_assets.rs").exists());
+    assert!(
+        dir.path()
+            .join("test-app/backend/src/static_assets.rs")
+            .exists()
+    );
 }
 
 #[test]
@@ -92,11 +100,13 @@ fn init_screen_scss_is_non_empty() {
         .assert()
         .success();
 
-    let contents = std::fs::read_to_string(
-        dir.path().join("test-app/frontend/styles/screen.scss")
-    ).unwrap();
+    let contents =
+        std::fs::read_to_string(dir.path().join("test-app/frontend/styles/screen.scss")).unwrap();
     assert!(!contents.is_empty(), "screen.scss should not be empty");
-    assert!(contents.contains("box-sizing"), "screen.scss should contain CSS reset");
+    assert!(
+        contents.contains("box-sizing"),
+        "screen.scss should contain CSS reset"
+    );
 }
 
 #[test]
@@ -108,13 +118,24 @@ fn init_static_assets_rs_has_embed_assets_cfg_gate() {
         .assert()
         .success();
 
-    let contents = std::fs::read_to_string(
-        dir.path().join("test-app/backend/src/static_assets.rs")
-    ).unwrap();
-    assert!(contents.contains("embed-assets"), "static_assets.rs should be cfg-gated on embed-assets");
-    assert!(contents.contains("spa_fallback"), "static_assets.rs should contain spa_fallback handler");
-    assert!(contents.contains("serve_pkg_file"), "static_assets.rs should contain serve_pkg_file handler");
-    assert!(contents.contains("serve_css"), "static_assets.rs should contain serve_css handler");
+    let contents =
+        std::fs::read_to_string(dir.path().join("test-app/backend/src/static_assets.rs")).unwrap();
+    assert!(
+        contents.contains("embed-assets"),
+        "static_assets.rs should be cfg-gated on embed-assets"
+    );
+    assert!(
+        contents.contains("spa_fallback"),
+        "static_assets.rs should contain spa_fallback handler"
+    );
+    assert!(
+        contents.contains("serve_pkg_file"),
+        "static_assets.rs should contain serve_pkg_file handler"
+    );
+    assert!(
+        contents.contains("serve_css"),
+        "static_assets.rs should contain serve_css handler"
+    );
 }
 
 #[test]
@@ -126,10 +147,12 @@ fn init_index_html_links_screen_css() {
         .assert()
         .success();
 
-    let contents = std::fs::read_to_string(
-        dir.path().join("test-app/frontend/index.html")
-    ).unwrap();
-    assert!(contents.contains("/styles/screen.css"), "index.html should link to /styles/screen.css");
+    let contents =
+        std::fs::read_to_string(dir.path().join("test-app/frontend/index.html")).unwrap();
+    assert!(
+        contents.contains("/styles/screen.css"),
+        "index.html should link to /styles/screen.css"
+    );
 }
 
 #[test]
@@ -141,10 +164,11 @@ fn init_gitignore_excludes_compiled_css() {
         .assert()
         .success();
 
-    let contents = std::fs::read_to_string(
-        dir.path().join("test-app/.gitignore")
-    ).unwrap();
-    assert!(contents.contains("screen.css"), ".gitignore should exclude compiled screen.css");
+    let contents = std::fs::read_to_string(dir.path().join("test-app/.gitignore")).unwrap();
+    assert!(
+        contents.contains("screen.css"),
+        ".gitignore should exclude compiled screen.css"
+    );
 }
 
 #[test]

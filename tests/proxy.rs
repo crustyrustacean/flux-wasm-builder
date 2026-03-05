@@ -6,7 +6,9 @@ use flux_wasm_builder::domain::{DevConfig, FluxConfig, ProjectConfig};
 
 fn make_config(backend_port: u16) -> FluxConfig {
     FluxConfig {
-        project: ProjectConfig { name: "test".to_string() },
+        project: ProjectConfig {
+            name: "test".to_string(),
+        },
         dev: DevConfig {
             public_port: 8080,
             backend_port,
