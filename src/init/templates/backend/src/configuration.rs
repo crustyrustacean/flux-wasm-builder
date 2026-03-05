@@ -112,7 +112,9 @@ mod tests {
     fn find_configuration_dir_returns_none_when_no_config_exists() {
         // A fresh temp dir has no configuration/base.yaml
         let dir = tempdir().unwrap();
-        std::env::set_current_dir(dir.path()).unwrap();
+        unsafe {
+            std::env::set_current_dir(dir.path()).unwrap();
+        }
         // Can't assert None directly since other tests may have config dirs
         // above them, but we can assert it doesn't panic
         let _ = find_configuration_dir();
@@ -120,7 +122,9 @@ mod tests {
 
     #[test]
     fn effective_port_uses_flux_backend_port_env_var() {
-        std::env::set_var("FLUX_BACKEND_PORT", "9999");
+        unsafe {
+            std::env::set_var("FLUX_BACKEND_PORT", "9999");
+        }
         let settings = ApplicationSettings {
             port: 3001,
             host: "127.0.0.1".to_string(),
@@ -132,7 +136,9 @@ mod tests {
 
     #[test]
     fn effective_port_falls_back_to_config_port() {
-        std::env::remove_var("FLUX_BACKEND_PORT");
+        unsafe {
+            std::env::remove_var("FLUX_BACKEND_PORT");
+        }
         let settings = ApplicationSettings {
             port: 3001,
             host: "127.0.0.1".to_string(),
@@ -143,7 +149,9 @@ mod tests {
 
     #[test]
     fn effective_port_ignores_invalid_env_var() {
-        std::env::set_var("FLUX_BACKEND_PORT", "not-a-number");
+        unsafe {
+            std::env::set_var("FLUX_BACKEND_PORT", "not-a-number");
+        }
         let settings = ApplicationSettings {
             port: 3001,
             host: "127.0.0.1".to_string(),
