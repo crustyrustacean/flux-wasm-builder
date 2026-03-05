@@ -105,9 +105,11 @@ struct ProcessManager {
 
 impl ProcessManager {
     fn new(config: &FluxConfig) -> Result<Self, DevError> {
+        let backend_dir = std::env::current_dir()?.join("backend");
         let child = Command::new("cargo")
             .args(["run", "-p", &format!("{}-backend", config.project.name)])
             .env("FLUX_BACKEND_PORT", config.dev.backend_port.to_string())
+            .current_dir(backend_dir)
             .spawn()?;
 
         Ok(Self {
@@ -149,8 +151,11 @@ impl ProcessManager {
         }
 
         // Respawn
+        let backend_dir = std::env::current_dir()?.join("backend");
         let child = Command::new("cargo")
             .args(["run", "-p", &format!("{}-backend", config.project.name)])
+            .env("FLUX_BACKEND_PORT", config.dev.backend_port.to_string())
+            .current_dir(backend_dir)
             .spawn()?;
 
         self.handle = Some(child);
