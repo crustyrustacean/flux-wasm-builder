@@ -41,6 +41,8 @@ pub struct BuildConfig {
     pub pkg_output_path: PathBuf,
     /// Path to index.html (default: frontend_crate_path + "/index.html")
     pub index_html_path: PathBuf,
+    /// Path to the public/ directory (default: frontend_crate_path + "/public")
+    pub public_path: PathBuf,
     /// Watch debounce interval in milliseconds (default: 300)
     pub watch_debounce_ms: u64,
     /// WebSocket path for reload signaling (default: "/ws/reload")
@@ -59,6 +61,7 @@ impl BuildConfig {
         Self {
             pkg_output_path: frontend_crate_path.join("pkg"),
             index_html_path: frontend_crate_path.join("index.html"),
+            public_path: frontend_crate_path.join("public"),
             watch_debounce_ms: 300,
             reload_ws_path: "/ws/reload".to_string(),
             port: 8080,
@@ -173,6 +176,12 @@ pub async fn run_command_with_timeout(
 mod tests {
     use super::*;
     use tempfile::tempdir;
+
+    #[test]
+    fn build_config_default_public_path_is_relative_to_frontend() {
+        let config = BuildConfig::new(PathBuf::from("../frontend"));
+        assert_eq!(config.public_path, PathBuf::from("../frontend/public"));
+    }
 
     #[test]
     fn build_config_default_pkg_path_is_relative_to_frontend() {
