@@ -51,9 +51,76 @@ pub fn backend_build_rs() -> &'static str {
     include_str!("templates/backend/build.rs")
 }
 
-/// Backend main.rs
-pub fn backend_main_rs() -> &'static str {
-    include_str!("templates/backend/main.rs")
+/// Backend src/bin/main.rs
+pub fn backend_bin_main_rs(name: &str) -> String {
+    let crate_name = name.replace('-', "_");
+    include_str!("templates/backend/src/bin/main.rs")
+        .replace("{{name}}", name)
+        .replace("{{crate_name}}", &crate_name)
+}
+
+/// Backend src/lib.rs
+pub fn backend_lib_rs() -> &'static str {
+    include_str!("templates/backend/src/lib.rs")
+}
+
+/// Backend src/configuration.rs
+pub fn backend_configuration_rs() -> &'static str {
+    include_str!("templates/backend/src/configuration.rs")
+}
+
+/// Backend src/error.rs
+pub fn backend_error_rs() -> &'static str {
+    include_str!("templates/backend/src/error.rs")
+}
+
+/// Backend src/response.rs
+pub fn backend_response_rs() -> &'static str {
+    include_str!("templates/backend/src/response.rs")
+}
+
+/// Backend src/telemetry.rs
+pub fn backend_telemetry_rs() -> &'static str {
+    include_str!("templates/backend/src/telemetry.rs")
+}
+
+/// Backend src/startup.rs
+pub fn backend_startup_rs() -> &'static str {
+    include_str!("templates/backend/src/startup.rs")
+}
+
+/// Backend configuration/base.yaml
+pub fn backend_configuration_base_yaml() -> &'static str {
+    include_str!("templates/backend/configuration/base.yaml")
+}
+
+/// Backend configuration/local.yaml
+pub fn backend_configuration_local_yaml() -> &'static str {
+    include_str!("templates/backend/configuration/local.yaml")
+}
+
+/// Backend configuration/production.yaml
+pub fn backend_configuration_production_yaml() -> &'static str {
+    include_str!("templates/backend/configuration/production.yaml")
+}
+
+/// Backend tests/api/main.rs
+pub fn backend_tests_api_main_rs() -> &'static str {
+    include_str!("templates/backend/tests/api/main.rs")
+}
+
+/// Backend tests/api/helpers.rs
+pub fn backend_tests_api_helpers_rs(name: &str) -> String {
+    let crate_name = name.replace('-', "_");
+    include_str!("templates/backend/tests/api/helpers.rs")
+        .replace("{{crate_name}}", &crate_name)
+}
+
+/// Backend tests/api/health_check.rs
+pub fn backend_tests_api_health_check_rs(name: &str) -> String {
+    let crate_name = name.replace('-', "_");
+    include_str!("templates/backend/tests/api/health_check.rs")
+        .replace("{{crate_name}}", &crate_name)
 }
 
 /// Backend static_assets.rs

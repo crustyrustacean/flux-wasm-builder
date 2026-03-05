@@ -87,7 +87,10 @@ pub fn scaffold(root: &Path, name: &str) -> Result<(), InitError> {
 fn create_dirs(project_root: &Path) -> Result<(), InitError> {
     let dirs = [
         project_root.join(".cargo"),
+        project_root.join("backend/src/bin"),
         project_root.join("backend/src/api"),
+        project_root.join("backend/configuration"),
+        project_root.join("backend/tests/api"),
         project_root.join("frontend/src"),
         project_root.join("frontend/styles"),
         project_root.join("frontend/public"),
@@ -133,8 +136,32 @@ fn write_files(project_root: &Path, name: &str) -> Result<(), InitError> {
             templates::backend_build_rs().to_string(),
         ),
         (
-            project_root.join("backend/src/main.rs"),
-            templates::backend_main_rs().to_string(),
+            project_root.join("backend/src/bin/main.rs"),
+            templates::backend_bin_main_rs(name),
+        ),
+        (
+            project_root.join("backend/src/lib.rs"),
+            templates::backend_lib_rs().to_string(),
+        ),
+        (
+            project_root.join("backend/src/configuration.rs"),
+            templates::backend_configuration_rs().to_string(),
+        ),
+        (
+            project_root.join("backend/src/error.rs"),
+            templates::backend_error_rs().to_string(),
+        ),
+        (
+            project_root.join("backend/src/response.rs"),
+            templates::backend_response_rs().to_string(),
+        ),
+        (
+            project_root.join("backend/src/telemetry.rs"),
+            templates::backend_telemetry_rs().to_string(),
+        ),
+        (
+            project_root.join("backend/src/startup.rs"),
+            templates::backend_startup_rs().to_string(),
         ),
         (
             project_root.join("backend/src/api/mod.rs"),
@@ -143,6 +170,30 @@ fn write_files(project_root: &Path, name: &str) -> Result<(), InitError> {
         (
             project_root.join("backend/src/static_assets.rs"),
             templates::backend_static_assets_rs().to_string(),
+        ),
+        (
+            project_root.join("backend/configuration/base.yaml"),
+            templates::backend_configuration_base_yaml().to_string(),
+        ),
+        (
+            project_root.join("backend/configuration/local.yaml"),
+            templates::backend_configuration_local_yaml().to_string(),
+        ),
+        (
+            project_root.join("backend/configuration/production.yaml"),
+            templates::backend_configuration_production_yaml().to_string(),
+        ),
+        (
+            project_root.join("backend/tests/api/main.rs"),
+            templates::backend_tests_api_main_rs().to_string(),
+        ),
+        (
+            project_root.join("backend/tests/api/helpers.rs"),
+            templates::backend_tests_api_helpers_rs(name),
+        ),
+        (
+            project_root.join("backend/tests/api/health_check.rs"),
+            templates::backend_tests_api_health_check_rs(name),
         ),
         // Frontend
         (
@@ -218,7 +269,8 @@ mod tests {
         assert!(root.path().join("my-app/backend/Cargo.toml").exists());
         assert!(root.path().join("my-app/flux.toml").exists());
         assert!(root.path().join("my-app/backend/build.rs").exists());
-        assert!(root.path().join("my-app/backend/src/main.rs").exists());
+        assert!(root.path().join("my-app/backend/src/bin/main.rs").exists());
+        assert!(root.path().join("my-app/backend/src/lib.rs").exists());
         assert!(
             root.path()
                 .join("my-app/backend/src/static_assets.rs")
@@ -275,13 +327,64 @@ mod tests {
     }
 
     #[test]
-    fn backend_main_uses_actix_web_main_not_tokio_main() {
+    fn backend_bin_main_uses_tokio_main() {
         let root = tempdir().unwrap();
         scaffold(root.path(), "my-app").unwrap();
-        let contents =
-            std::fs::read_to_string(root.path().join("my-app/backend/src/main.rs")).unwrap();
-        assert!(contents.contains("actix_web::main"));
-        assert!(!contents.contains("tokio::main"));
+        let contents = std::fs::read_to_string(
+            root.path().join("my-app/backend/src/bin/main.rs")
+        ).unwrap();
+        assert!(contents.contains("tokio::main"));
+    }
+
+    #[test]
+    fn backend_has_lib_rs() {
+        let root = tempdir().unwrap();
+        scaffold(root.path(), "my-app").unwrap();
+        assert!(root.path().join("my-app/backend/src/lib.rs").exists());
+    }
+
+    #[test]
+    fn backend_has_configuration_directory() {
+        let root = tempdir().unwrap();
+        scaffold(root.path(), "my-app").unwrap();
+        assert!(root.path().join("my-app/backend/configuration/base.yaml").exists());
+        assert!(root.path().join("my-app/backend/configuration/local.yaml").exists());
+        assert!(root.path().join("my-app/backend/configuration/production.yaml").exists());
+    }
+
+    #[test]
+    fn backend_configuration_default_port_is_3001() {
+        let root = tempdir().unwrap();
+        scaffold(root.path(), "my-app").unwrap();
+        let contents = std::fs::read_to_string(
+            root.path().join("my-app/backend/configuration/base.yaml")
+        ).unwrap();
+        assert!(contents.contains("3001"));
+    }
+
+    #[test]
+    fn backend_has_startup_module() {
+        let root = tempdir().unwrap();
+        scaffold(root.path(), "my-app").unwrap();
+        assert!(root.path().join("my-app/backend/src/startup.rs").exists());
+    }
+
+    #[test]
+    fn backend_has_error_and_response_modules() {
+        let root = tempdir().unwrap();
+        scaffold(root.path(), "my-app").unwrap();
+        assert!(root.path().join("my-app/backend/src/error.rs").exists());
+        assert!(root.path().join("my-app/backend/src/response.rs").exists());
+    }
+
+    #[test]
+    fn backend_api_health_check_returns_api_response() {
+        let root = tempdir().unwrap();
+        scaffold(root.path(), "my-app").unwrap();
+        let contents = std::fs::read_to_string(
+            root.path().join("my-app/backend/src/api/mod.rs")
+        ).unwrap();
+        assert!(contents.contains("ApiResponse"));
     }
 
     #[test]
