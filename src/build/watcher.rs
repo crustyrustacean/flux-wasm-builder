@@ -45,13 +45,14 @@ pub type FileWatcher =
 ///
 /// ```ignore
 /// let (tx, rx) = tokio::sync::mpsc::channel(8);
-/// let watcher = start_watcher(Path::new("../frontend/src"), 300, tx)?;
+/// let watcher = start_watcher(Path::new("../frontend/src"), 300, tx, Some(&["rs"]))?;
 /// // Store `watcher` in a long-lived struct - do not drop it!
 /// ```
 pub fn start_watcher(
     watch_path: &Path,
     debounce_ms: u64,
     build_tx: Sender<()>,
+    extensions: Option<&'static [&'static str]>,
 ) -> Result<FileWatcher, notify_debouncer_mini::notify::Error> {
     let span = tracing::info_span!(
         "file_watcher",
@@ -62,40 +63,38 @@ pub fn start_watcher(
 
     tracing::info!("starting file watcher");
 
-    // For Rust source directories, only trigger on .rs changes.
-    // For other directories (e.g. public/), trigger on any file change.
-    let is_src_dir = watch_path.ends_with("src");
-
     let mut debouncer = new_debouncer(
         Duration::from_millis(debounce_ms),
         move |result: DebounceEventResult| {
             match result {
                 Ok(events) => {
-                    let should_trigger = if is_src_dir {
-                        events
-                            .iter()
-                            .any(|e| e.path.extension().map(|ext| ext == "rs").unwrap_or(false))
-                    } else {
-                        !events.is_empty()
+                    let should_trigger = match extensions {
+                        Some(exts) => events.iter().any(|e| {
+                            e.path
+                                .extension()
+                                .and_then(|ext| ext.to_str())
+                                .map(|ext| exts.contains(&ext))
+                                .unwrap_or(false)
+                        }),
+                        None => !events.is_empty(),
                     };
 
                     if should_trigger {
-                        tracing::debug!(event_count = events.len(), "file change detected");
-                        // Use blocking_send() because this callback runs on a non-async
-                        // background thread (notify's thread pool), but the receiver is
-                        // a tokio async channel.
+                        tracing::debug!(
+                            event_count = events.len(),
+                            "file change detected"
+                        );
                         if let Err(e) = build_tx.blocking_send(()) {
-                            // The receiver has been dropped — the build coordinator
-                            // has exited. Stop logging; the process is likely shutting down.
-                            tracing::debug!(error = %e, "build channel closed — watcher callback exiting");
+                            tracing::debug!(
+                                error = %e,
+                                "build channel closed — watcher callback exiting"
+                            );
                         }
                     } else {
-                        tracing::trace!("ignored non-.rs file event");
+                        tracing::trace!("ignored file event (extension not matched)");
                     }
                 }
                 Err(e) => {
-                    // Watcher errors are non-fatal — log and continue.
-                    // Common causes: race condition on file deletion during atomic save.
                     tracing::warn!(error = %e, "file watcher error");
                 }
             }
@@ -129,7 +128,8 @@ mod tests {
         std::fs::write(src.join("lib.rs"), b"// initial").unwrap();
 
         let (tx, mut rx) = mpsc::channel(8);
-        let _watcher = start_watcher(dir.path(), 50, tx).expect("watcher should start");
+        let _watcher = start_watcher(dir.path(), 50, tx, Some(&["rs"]))
+            .expect("watcher should start");
 
         // Wait for watcher to initialize
         std::thread::sleep(Duration::from_millis(200));
@@ -158,8 +158,8 @@ mod tests {
         std::fs::create_dir(&src).unwrap();
 
         let (tx, mut rx) = mpsc::channel(8);
-        // Watch the `src` subdirectory so is_src_dir = true (only .rs files trigger)
-        let _watcher = start_watcher(&src, 50, tx).expect("watcher should start");
+        let _watcher = start_watcher(dir.path(), 50, tx, Some(&["rs"]))
+            .expect("watcher should start");
 
         // Wait for watcher to initialize
         std::thread::sleep(Duration::from_millis(200));
@@ -190,7 +190,8 @@ mod tests {
 
         let (tx, mut rx) = mpsc::channel(8);
 
-        let watcher = start_watcher(&src, 50, tx).expect("watcher should start");
+        let watcher = start_watcher(&src, 50, tx, Some(&["rs"]))
+            .expect("watcher should start");
 
         // Wait for watcher to initialize
         std::thread::sleep(Duration::from_millis(200));
@@ -222,7 +223,12 @@ mod tests {
     #[test]
     fn watcher_returns_error_for_nonexistent_path() {
         let (tx, _rx) = mpsc::channel(8);
-        let result = start_watcher(Path::new("/nonexistent/path/that/does/not/exist"), 50, tx);
+        let result = start_watcher(
+            Path::new("/nonexistent/path/that/does/not/exist"),
+            50,
+            tx,
+            Some(&["rs"]),
+        );
         assert!(result.is_err(), "should return error for nonexistent path");
     }
 
@@ -234,7 +240,8 @@ mod tests {
         std::fs::write(src.join("lib.rs"), b"// initial").unwrap();
 
         let (tx, mut rx) = mpsc::channel(8);
-        let _watcher = start_watcher(&src, 100, tx).expect("watcher should start");
+        let _watcher = start_watcher(&src, 100, tx, Some(&["rs"]))
+            .expect("watcher should start");
 
         // Wait for watcher to initialize
         std::thread::sleep(Duration::from_millis(200));
@@ -259,6 +266,93 @@ mod tests {
         assert!(
             count <= 2,
             "rapid changes should be debounced, got {count} signals"
+        );
+    }
+
+    #[test]
+    fn scss_file_change_triggers_signal_when_watching_scss() {
+        let dir = tempdir().unwrap();
+        let styles = dir.path().join("styles");
+        std::fs::create_dir(&styles).unwrap();
+        std::fs::write(styles.join("screen.scss"), "body { color: red; }").unwrap();
+
+        let (tx, mut rx) = mpsc::channel(8);
+        let _watcher = start_watcher(dir.path(), 50, tx, Some(&["scss"]))
+            .expect("watcher should start");
+
+        std::thread::sleep(Duration::from_millis(200));
+
+        std::fs::write(styles.join("screen.scss"), "body { color: blue; }").unwrap();
+
+        let result = std::thread::spawn(move || {
+            let rt = tokio::runtime::Runtime::new().unwrap();
+            rt.block_on(async {
+                tokio::time::timeout(Duration::from_secs(3), rx.recv()).await
+            })
+        })
+        .join()
+        .unwrap();
+
+        assert!(
+            result.is_ok() && result.unwrap().is_some(),
+            "should receive signal after .scss file change"
+        );
+    }
+
+    #[test]
+    fn rs_file_does_not_trigger_signal_when_watching_scss() {
+        let dir = tempdir().unwrap();
+        let src = dir.path().join("src");
+        std::fs::create_dir(&src).unwrap();
+
+        let (tx, mut rx) = mpsc::channel(8);
+        let _watcher = start_watcher(dir.path(), 50, tx, Some(&["scss"]))
+            .expect("watcher should start");
+
+        std::thread::sleep(Duration::from_millis(200));
+
+        std::fs::write(src.join("lib.rs"), "// change").unwrap();
+
+        let result = std::thread::spawn(move || {
+            let rt = tokio::runtime::Runtime::new().unwrap();
+            rt.block_on(async {
+                tokio::time::timeout(Duration::from_millis(600), rx.recv()).await
+            })
+        })
+        .join()
+        .unwrap();
+
+        assert!(
+            result.is_err(),
+            ".rs change should not trigger signal when watching .scss only"
+        );
+    }
+
+    #[test]
+    fn none_extensions_triggers_on_any_file_change() {
+        let dir = tempdir().unwrap();
+        std::fs::write(dir.path().join("logo.png"), b"\x89PNG").unwrap();
+
+        let (tx, mut rx) = mpsc::channel(8);
+        let _watcher = start_watcher(dir.path(), 50, tx, None)
+            .expect("watcher should start");
+
+        std::thread::sleep(Duration::from_millis(200));
+
+        std::fs::write(dir.path().join("logo.png"), b"\x89PNG updated").unwrap();
+
+        let result = std::thread::spawn(move || {
+            let rt = tokio::runtime::Runtime::new().unwrap();
+            rt.block_on(async {
+                tokio::time::timeout(Duration::from_secs(3), rx.recv()).await
+            })
+        })
+        .join()
+        .unwrap();
+
+        assert!(
+            result.is_ok() && result.unwrap().is_some(),
+            "should receive signal for any file change when extensions is None"
         );
     }
 }
