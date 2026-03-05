@@ -518,6 +518,36 @@ mod tests {
     }
 
     #[test]
+    fn backend_configuration_rs_has_find_configuration_dir() {
+        let root = tempdir().unwrap();
+        scaffold(root.path(), "my-app").unwrap();
+        let contents = std::fs::read_to_string(
+            root.path().join("my-app/backend/src/configuration.rs")
+        ).unwrap();
+        assert!(
+            contents.contains("find_configuration_dir"),
+            "configuration.rs should have find_configuration_dir function"
+        );
+    }
+
+    #[test]
+    fn backend_configuration_rs_has_effective_port() {
+        let root = tempdir().unwrap();
+        scaffold(root.path(), "my-app").unwrap();
+        let contents = std::fs::read_to_string(
+            root.path().join("my-app/backend/src/configuration.rs")
+        ).unwrap();
+        assert!(
+            contents.contains("effective_port"),
+            "configuration.rs should have effective_port method"
+        );
+        assert!(
+            contents.contains("FLUX_BACKEND_PORT"),
+            "configuration.rs should respect FLUX_BACKEND_PORT env var"
+        );
+    }
+
+    #[test]
     fn fails_if_project_name_starts_with_invalid_char() {
         let root = tempdir().unwrap();
         let result = scaffold(root.path(), "-test");
