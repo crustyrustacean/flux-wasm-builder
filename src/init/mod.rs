@@ -139,6 +139,10 @@ fn write_files(project_root: &Path, name: &str) -> Result<(), InitError> {
             project_root.join("backend/src/api/mod.rs"),
             templates::backend_api_mod(name),
         ),
+        (
+            project_root.join("backend/src/static_assets.rs"),
+            templates::backend_static_assets_rs().to_string(),
+        ),
         // Frontend
         (
             project_root.join("frontend/Cargo.toml"),
@@ -210,6 +214,7 @@ mod tests {
         assert!(root.path().join("my-app/flux.toml").exists());
         assert!(root.path().join("my-app/backend/build.rs").exists());
         assert!(root.path().join("my-app/backend/src/main.rs").exists());
+        assert!(root.path().join("my-app/backend/src/static_assets.rs").exists());
         assert!(root.path().join("my-app/frontend/Cargo.toml").exists());
         assert!(root.path().join("my-app/frontend/src/lib.rs").exists());
         assert!(root.path().join("my-app/frontend/index.html").exists());
@@ -246,6 +251,7 @@ mod tests {
         let contents = std::fs::read_to_string(root.path().join("my-app/.gitignore")).unwrap();
         assert!(contents.contains("target/"));
         assert!(contents.contains("frontend/pkg/"));
+        assert!(contents.contains("frontend/styles/screen.css"));
     }
 
     #[test]

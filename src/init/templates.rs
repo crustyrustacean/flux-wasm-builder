@@ -56,6 +56,11 @@ pub fn backend_main_rs() -> &'static str {
     include_str!("templates/backend/main.rs")
 }
 
+/// Backend static_assets.rs
+pub fn backend_static_assets_rs() -> &'static str {
+    include_str!("templates/backend/src/static_assets.rs")
+}
+
 /// Backend API module
 pub fn backend_api_mod(name: &str) -> String {
     let crate_name = name.replace('-', "_");
