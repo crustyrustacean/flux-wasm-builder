@@ -62,18 +62,25 @@ pub fn start_watcher(
 
     tracing::info!("starting file watcher");
 
+    // For Rust source directories, only trigger on .rs changes.
+    // For other directories (e.g. public/), trigger on any file change.
+    let is_src_dir = watch_path.ends_with("src");
+
     let mut debouncer = new_debouncer(
         Duration::from_millis(debounce_ms),
         move |result: DebounceEventResult| {
             match result {
                 Ok(events) => {
-                    // Check if any event involves a .rs file
-                    let rs_change = events
-                        .iter()
-                        .any(|e| e.path.extension().map(|ext| ext == "rs").unwrap_or(false));
+                    let should_trigger = if is_src_dir {
+                        events
+                            .iter()
+                            .any(|e| e.path.extension().map(|ext| ext == "rs").unwrap_or(false))
+                    } else {
+                        !events.is_empty()
+                    };
 
-                    if rs_change {
-                        tracing::debug!(event_count = events.len(), "Rust source change detected");
+                    if should_trigger {
+                        tracing::debug!(event_count = events.len(), "file change detected");
                         // Use blocking_send() because this callback runs on a non-async
                         // background thread (notify's thread pool), but the receiver is
                         // a tokio async channel.
@@ -151,7 +158,8 @@ mod tests {
         std::fs::create_dir(&src).unwrap();
 
         let (tx, mut rx) = mpsc::channel(8);
-        let _watcher = start_watcher(dir.path(), 50, tx).expect("watcher should start");
+        // Watch the `src` subdirectory so is_src_dir = true (only .rs files trigger)
+        let _watcher = start_watcher(&src, 50, tx).expect("watcher should start");
 
         // Wait for watcher to initialize
         std::thread::sleep(Duration::from_millis(200));
@@ -182,7 +190,7 @@ mod tests {
 
         let (tx, mut rx) = mpsc::channel(8);
 
-        let watcher = start_watcher(dir.path(), 50, tx).expect("watcher should start");
+        let watcher = start_watcher(&src, 50, tx).expect("watcher should start");
 
         // Wait for watcher to initialize
         std::thread::sleep(Duration::from_millis(200));
@@ -226,7 +234,7 @@ mod tests {
         std::fs::write(src.join("lib.rs"), b"// initial").unwrap();
 
         let (tx, mut rx) = mpsc::channel(8);
-        let _watcher = start_watcher(dir.path(), 100, tx).expect("watcher should start");
+        let _watcher = start_watcher(&src, 100, tx).expect("watcher should start");
 
         // Wait for watcher to initialize
         std::thread::sleep(Duration::from_millis(200));

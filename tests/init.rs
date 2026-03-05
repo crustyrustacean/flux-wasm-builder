@@ -172,6 +172,30 @@ fn init_gitignore_excludes_compiled_css() {
 }
 
 #[test]
+fn init_creates_public_directory() {
+    let dir = tempdir().unwrap();
+    cargo_bin_cmd!("flux-wasm-builder")
+        .args(["init", "test-app"])
+        .current_dir(dir.path())
+        .assert()
+        .success();
+
+    assert!(dir.path().join("test-app/frontend/public").exists());
+}
+
+#[test]
+fn init_public_directory_contains_gitkeep() {
+    let dir = tempdir().unwrap();
+    cargo_bin_cmd!("flux-wasm-builder")
+        .args(["init", "test-app"])
+        .current_dir(dir.path())
+        .assert()
+        .success();
+
+    assert!(dir.path().join("test-app/frontend/public/.gitkeep").exists());
+}
+
+#[test]
 fn dev_command_exists() {
     let dir = tempdir().unwrap();
     cargo_bin_cmd!("flux-wasm-builder")

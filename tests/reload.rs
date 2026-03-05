@@ -113,15 +113,18 @@ async fn index_html_contains_reload_script_when_dev_mode_true() {
     let dir = tempdir().unwrap();
     let index = dir.path().join("index.html");
     std::fs::write(&index, b"<html><body></body></html>").unwrap();
+    let public = dir.path().join("public");
+    std::fs::create_dir(&public).unwrap();
     let config = BuildConfig {
         index_html_path: index,
+        public_path: public,
         ..BuildConfig::new("/unused")
     };
     let app = actix_test::init_service(
         App::new()
             .app_data(web::Data::new(config))
             .app_data(web::Data::new(DevMode(true)))
-            .default_service(web::get().to(spa_fallback)),
+            .default_service(web::to(spa_fallback)),
     )
     .await;
     let body = actix_test::read_body(
@@ -139,15 +142,18 @@ async fn index_html_omits_reload_script_when_dev_mode_false() {
     let dir = tempdir().unwrap();
     let index = dir.path().join("index.html");
     std::fs::write(&index, b"<html><body></body></html>").unwrap();
+    let public = dir.path().join("public");
+    std::fs::create_dir(&public).unwrap();
     let config = BuildConfig {
         index_html_path: index,
+        public_path: public,
         ..BuildConfig::new("/unused")
     };
     let app = actix_test::init_service(
         App::new()
             .app_data(web::Data::new(config))
             .app_data(web::Data::new(DevMode(false)))
-            .default_service(web::get().to(spa_fallback)),
+            .default_service(web::to(spa_fallback)),
     )
     .await;
     let body = actix_test::read_body(
