@@ -2,9 +2,11 @@
 
 use crate::api;
 use crate::configuration::Settings;
+use actix_web::{App, HttpServer};
 use actix_web::dev::Server;
+ #[cfg(feature = "embed-assets")]
+use actix_web::web;
 use actix_web::web::Data;
-use actix_web::{App, HttpServer, web};
 use std::net::TcpListener;
 use tracing_actix_web::TracingLogger;
 
