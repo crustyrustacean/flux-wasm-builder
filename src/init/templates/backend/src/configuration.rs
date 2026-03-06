@@ -27,13 +27,18 @@ impl ApplicationSettings {
     }
 }
 
+/// Load configuration.
+///
+/// In development builds (no `embed-assets` feature), reads YAML files from
+/// the filesystem, walking up from the current directory to find them.
+///
+/// In release builds (`embed-assets` feature), `configuration/base.yaml` is
+/// embedded in the binary at compile time and used as the mandatory base.
+/// An environment-specific YAML file is still read from the filesystem if
+/// present next to the binary (using `required(false)`), allowing production
+/// deployments to customise settings without a recompile. Environment
+/// variables prefixed with `APP_` always override everything.
 pub fn get_configuration() -> Result<Settings, config::ConfigError> {
-    let base_path = find_configuration_dir().unwrap_or_else(|| {
-        std::env::current_dir().expect("Failed to determine current directory")
-    });
-
-    let configuration_directory = base_path.join("configuration");
-
     let environment: Environment = std::env::var("APP_ENVIRONMENT")
         .unwrap_or_else(|_| "local".into())
         .try_into()
@@ -41,26 +46,66 @@ pub fn get_configuration() -> Result<Settings, config::ConfigError> {
 
     let environment_filename = format!("{}.yaml", environment.as_str());
 
-    let settings = config::Config::builder()
-        .add_source(config::File::from(
-            configuration_directory.join("base.yaml"),
-        ))
-        .add_source(config::File::from(
-            configuration_directory.join(environment_filename),
-        ))
-        .add_source(
+    #[cfg(feature = "embed-assets")]
+    {
+        // Base config is embedded at compile time — binary works with zero
+        // filesystem dependencies out of the box.
+        let mut builder = config::Config::builder().add_source(config::File::from_str(
+            include_str!(concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/configuration/base.yaml"
+            )),
+            config::FileFormat::Yaml,
+        ));
+
+        // If an environment-specific file exists alongside the binary (or
+        // anywhere in the walk-up chain), layer it on top.  `required(false)`
+        // means its absence is not an error.
+        if let Some(base_path) = find_configuration_dir() {
+            let env_file = base_path.join("configuration").join(&environment_filename);
+            builder = builder.add_source(config::File::from(env_file).required(false));
+        }
+
+        builder = builder.add_source(
             config::Environment::with_prefix("APP")
                 .prefix_separator("_")
                 .separator("__"),
-        )
-        .build()?;
+        );
 
-    settings.try_deserialize::<Settings>()
+        return builder.build()?.try_deserialize::<Settings>();
+    }
+
+    #[cfg(not(feature = "embed-assets"))]
+    {
+        let base_path = find_configuration_dir().unwrap_or_else(|| {
+            std::env::current_dir().expect("Failed to determine current directory")
+        });
+
+        let configuration_directory = base_path.join("configuration");
+
+        let settings = config::Config::builder()
+            .add_source(config::File::from(
+                configuration_directory.join("base.yaml"),
+            ))
+            .add_source(config::File::from(
+                configuration_directory.join(environment_filename),
+            ))
+            .add_source(
+                config::Environment::with_prefix("APP")
+                    .prefix_separator("_")
+                    .separator("__"),
+            )
+            .build()?;
+
+        settings.try_deserialize::<Settings>()
+    }
 }
 
 /// Walk up from the current directory looking for a `configuration/base.yaml`.
-/// This allows the backend to be launched from the workspace root (as
-/// `flux-wasm-builder dev` does) or from the backend crate directory directly.
+///
+/// In dev mode this allows the backend to be launched from the workspace root
+/// or from the backend crate directory directly.  In release mode it is used
+/// to discover an optional environment-specific override file.
 fn find_configuration_dir() -> Option<PathBuf> {
     let mut dir = std::env::current_dir().ok()?;
     loop {
@@ -110,13 +155,10 @@ mod tests {
 
     #[test]
     fn find_configuration_dir_returns_none_when_no_config_exists() {
-        // A fresh temp dir has no configuration/base.yaml
         let dir = tempdir().unwrap();
         unsafe {
             std::env::set_current_dir(dir.path()).unwrap();
         }
-        // Can't assert None directly since other tests may have config dirs
-        // above them, but we can assert it doesn't panic
         let _ = find_configuration_dir();
     }
 
