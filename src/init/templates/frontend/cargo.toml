@@ -2,6 +2,9 @@
 name = "{{name}}-frontend"
 version.workspace = true
 edition.workspace = true
+description = "Frontend for {{name}}"
+license = "MIT"
+repository = ""
 
 [lib]
 crate-type = ["cdylib"]
