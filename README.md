@@ -100,7 +100,9 @@ Open `http://localhost:8080`. Edits to frontend, backend, styles, or public asse
 flux-wasm-builder release
 ```
 
-This runs `wasm-pack build --release` on the frontend, then `cargo build --release --features embed-assets` on the backend. The result is a single self-contained binary with all frontend assets embedded — no external files required.
+This runs `wasm-pack build --release` on the frontend, then `cargo build --release --features embed-assets` on the backend. The result is a single self-contained binary — all frontend assets **and** `configuration/base.yaml` are compiled in, so the binary runs with zero filesystem dependencies.
+
+Deploy the binary alone. To customise settings without a recompile, place an environment-specific YAML file (e.g. `configuration/production.yaml`) next to the binary or anywhere in its walk-up path. It is loaded on top of the embedded base config when present. `APP_*` environment variables are always applied last and override everything.
 
 ## Configuration
 
@@ -143,7 +145,7 @@ The tool runs four file watchers simultaneously:
 
 The scaffolded backend is an opinionated Actix-web starter. Out of the box `backend/src/` contains:
 
-- **`configuration.rs`** — YAML-based configuration loading via the `config` crate. Supports environment-specific overrides (`configuration/base.yaml`, `local.yaml`, `production.yaml`). The `FLUX_BACKEND_PORT` env var overrides the configured port at runtime.
+- **`configuration.rs`** — YAML-based configuration loading via the `config` crate. In development builds, reads `configuration/base.yaml` and an environment-specific file from the filesystem. In release builds (`embed-assets` feature), `base.yaml` is compiled directly into the binary via `include_str!` — no config files required at runtime. An optional environment-specific file (e.g. `configuration/production.yaml`) placed next to the binary is still loaded when present. `APP_*` environment variables override everything. The `FLUX_BACKEND_PORT` env var overrides the configured port at runtime.
 - **`startup.rs`** — `Application` struct that wires up the Actix-web server, routes, and middleware.
 - **`error.rs`** — `ApiError` enum implementing Actix-web's `ResponseError` trait, mapping variants (`BadRequest`, `NotFound`, `Internal`) to HTTP status codes.
 - **`response.rs`** — `ApiResponse<T>` generic wrapper implementing the `Responder` trait, with `success()` and `error()` constructors for consistent JSON responses.
@@ -174,7 +176,7 @@ pub struct StatusResponse {
 
 | Flag | Effect |
 |------|--------|
-| `embed-assets` | Embeds `frontend/pkg/`, `frontend/index.html`, `frontend/public/`, and compiled CSS into the binary at compile time |
+| `embed-assets` | Embeds `frontend/pkg/`, `frontend/index.html`, `frontend/public/`, compiled CSS, **and `configuration/base.yaml`** into the binary at compile time. The resulting binary has zero runtime filesystem dependencies. |
 
 Used automatically by `flux-wasm-builder release`.
 
