@@ -18,6 +18,7 @@ This starts a dev server on port 8080 that:
 - Watches `frontend/src/` and rebuilds WASM on changes
 - Watches `backend/src/` and restarts the backend on changes
 - Watches `frontend/styles/` and recompiles SCSS on changes
+- Watches `frontend/public/` and triggers a browser reload on changes
 - Signals the browser to reload after successful builds
 
 The generated project contains only user code — API handlers, Yew components, shared types, and styles. The tool handles everything else.
@@ -60,12 +61,23 @@ my-app/
 ├── backend/                # Actix-web API server
 │   ├── Cargo.toml
 │   ├── build.rs
-│   └── src/
-│       ├── main.rs
-│       └── api/
+│   ├── configuration/      # YAML-based config (base, local, production)
+│   ├── src/
+│   │   ├── bin/main.rs
+│   │   ├── lib.rs
+│   │   ├── api/
+│   │   ├── configuration.rs
+│   │   ├── error.rs
+│   │   ├── response.rs
+│   │   ├── startup.rs
+│   │   ├── static_assets.rs
+│   │   └── telemetry.rs
+│   └── tests/
+│       └── api/            # integration test scaffolding
 ├── frontend/               # Yew WASM application
 │   ├── Cargo.toml
 │   ├── index.html
+│   ├── public/             # static assets (served as-is)
 │   ├── src/
 │   └── styles/
 │       └── screen.scss     # Josh Comeau CSS reset included
@@ -80,7 +92,7 @@ my-app/
 flux-wasm-builder dev
 ```
 
-Open `http://localhost:8080`. Edits to frontend, backend, or styles are picked up automatically.
+Open `http://localhost:8080`. Edits to frontend, backend, styles, or public assets are picked up automatically.
 
 ### Build for release
 
@@ -111,20 +123,35 @@ The backend reads its port from the `FLUX_BACKEND_PORT` environment variable, wh
 ```
 Browser :8080
     │
-    ├── /api/*          → proxy → Backend :3001
-    ├── /pkg/*          → wasm-pack build output (filesystem)
-    ├── /styles/screen.css → compiled from frontend/styles/screen.scss
-    ├── /ws/reload      → WebSocket live reload
-    └── /*              → index.html (SPA fallback)
+    ├── /api/*              → proxy → Backend :3001
+    ├── /pkg/*              → wasm-pack build output (filesystem)
+    ├── /styles/screen.css  → compiled from frontend/styles/screen.scss
+    ├── /ws/reload          → WebSocket live reload
+    └── /*                  → index.html (SPA fallback)
 ```
 
-The tool runs three file watchers simultaneously:
+The tool runs four file watchers simultaneously:
 
-| Watcher | Path | On change |
-|---------|------|-----------|
-| Frontend | `frontend/src/` | `wasm-pack build`, then browser reload |
-| Backend | `backend/src/` | Kill backend, respawn, health check |
-| Styles | `frontend/styles/` | Recompile SCSS in memory, browser reload |
+| Watcher | Path | Filters | On change |
+|---------|------|---------|-----------|
+| Frontend | `frontend/src/` | `.rs` | `wasm-pack build`, then browser reload |
+| Backend | `backend/src/` | `.rs` | Kill backend, respawn, health check, then browser reload |
+| Styles | `frontend/styles/` | `.scss` | Recompile SCSS in memory, browser reload |
+| Public assets | `frontend/public/` | any file | Browser reload |
+
+## Generated backend
+
+The scaffolded backend is an opinionated Actix-web starter. Out of the box `backend/src/` contains:
+
+- **`configuration.rs`** — YAML-based configuration loading via the `config` crate. Supports environment-specific overrides (`configuration/base.yaml`, `local.yaml`, `production.yaml`). The `FLUX_BACKEND_PORT` env var overrides the configured port at runtime.
+- **`startup.rs`** — `Application` struct that wires up the Actix-web server, routes, and middleware.
+- **`error.rs`** — `ApiError` enum implementing Actix-web's `ResponseError` trait, mapping variants (`BadRequest`, `NotFound`, `Internal`) to HTTP status codes.
+- **`response.rs`** — `ApiResponse<T>` generic wrapper implementing the `Responder` trait, with `success()` and `error()` constructors for consistent JSON responses.
+- **`telemetry.rs`** — Tracing subscriber setup with environment-based log filtering via `tracing` and `tracing-subscriber`.
+- **`static_assets.rs`** — Serves embedded frontend assets in release builds. Gated on the `embed-assets` feature flag — not compiled during development.
+- **`api/`** — Route configuration with starter endpoints: `/api/health_check`, `/api/hello`, and `/api/status`.
+
+Integration test scaffolding lives in `tests/api/` with a `TestApp` helper that spawns the server on a random port, plus a sample health-check test to build on.
 
 ## The shared crate
 
@@ -147,7 +174,7 @@ pub struct StatusResponse {
 
 | Flag | Effect |
 |------|--------|
-| `embed-assets` | Embeds `frontend/pkg/` and `frontend/index.html` into the binary at compile time |
+| `embed-assets` | Embeds `frontend/pkg/`, `frontend/index.html`, `frontend/public/`, and compiled CSS into the binary at compile time |
 
 Used automatically by `flux-wasm-builder release`.
 
