@@ -192,7 +192,11 @@ fn init_public_directory_contains_gitkeep() {
         .assert()
         .success();
 
-    assert!(dir.path().join("test-app/frontend/public/.gitkeep").exists());
+    assert!(
+        dir.path()
+            .join("test-app/frontend/public/.gitkeep")
+            .exists()
+    );
 }
 
 #[test]

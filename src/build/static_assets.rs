@@ -510,8 +510,16 @@ mod tests {
         .await;
         let req = test::TestRequest::get().uri("/robots.txt").to_request();
         let resp = test::call_service(&app, req).await;
-        let ct = resp.headers().get("content-type").unwrap().to_str().unwrap();
-        assert!(!ct.contains("text/html"), "robots.txt should not return index.html");
+        let ct = resp
+            .headers()
+            .get("content-type")
+            .unwrap()
+            .to_str()
+            .unwrap();
+        assert!(
+            !ct.contains("text/html"),
+            "robots.txt should not return index.html"
+        );
     }
 
     #[actix_web::test]
@@ -534,8 +542,16 @@ mod tests {
         .await;
         let req = test::TestRequest::get().uri("/some/spa/route").to_request();
         let resp = test::call_service(&app, req).await;
-        let ct = resp.headers().get("content-type").unwrap().to_str().unwrap();
-        assert!(ct.contains("text/html"), "SPA route should return index.html");
+        let ct = resp
+            .headers()
+            .get("content-type")
+            .unwrap()
+            .to_str()
+            .unwrap();
+        assert!(
+            ct.contains("text/html"),
+            "SPA route should return index.html"
+        );
     }
 
     #[actix_web::test]
@@ -559,8 +575,16 @@ mod tests {
         .await;
         let req = test::TestRequest::get().uri("/logo.png").to_request();
         let resp = test::call_service(&app, req).await;
-        let ct = resp.headers().get("content-type").unwrap().to_str().unwrap();
-        assert!(ct.contains("image/png"), "png should have image/png content-type, got {ct}");
+        let ct = resp
+            .headers()
+            .get("content-type")
+            .unwrap()
+            .to_str()
+            .unwrap();
+        assert!(
+            ct.contains("image/png"),
+            "png should have image/png content-type, got {ct}"
+        );
     }
 }
 

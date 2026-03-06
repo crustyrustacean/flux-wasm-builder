@@ -131,7 +131,9 @@ mod tests {
             base_url: "http://127.0.0.1".to_string(),
         };
         assert_eq!(settings.effective_port(), 9999);
-        std::env::remove_var("FLUX_BACKEND_PORT");
+        unsafe {
+            std::env::remove_var("FLUX_BACKEND_PORT");
+        }
     }
 
     #[test]
@@ -158,6 +160,8 @@ mod tests {
             base_url: "http://127.0.0.1".to_string(),
         };
         assert_eq!(settings.effective_port(), 3001);
-        std::env::remove_var("FLUX_BACKEND_PORT");
+        unsafe {
+            std::env::remove_var("FLUX_BACKEND_PORT");
+        }
     }
 }

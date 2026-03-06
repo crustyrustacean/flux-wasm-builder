@@ -120,15 +120,17 @@ pub async fn run() -> Result<(), DevError> {
     });
 
     let restart_config = config.clone();
+    let reload_tx_for_restart = reload_tx.clone();
     tokio::spawn(async move {
         while let Some(()) = restart_rx.recv().await {
             if let Err(e) = process_manager.restart(&restart_config).await {
                 eprintln!("Failed to restart backend: {e}");
+            } else {
+                let _ = reload_tx_for_restart.send(());
             }
         }
     });
 
-    // ← replaces Ok(())
     serve(&config, build_config_for_serve, reload_tx, css_bytes).await?;
 
     Ok(())

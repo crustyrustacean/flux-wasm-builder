@@ -21,8 +21,7 @@ fn rs_file_change_triggers_build_signal() {
     std::fs::write(src.join("lib.rs"), b"// initial").unwrap();
 
     let (tx, mut rx) = mpsc::channel(8);
-    let _watcher = start_watcher(dir.path(), 50, tx, Some(&["rs"]))
-        .expect("watcher should start");
+    let _watcher = start_watcher(dir.path(), 50, tx, Some(&["rs"])).expect("watcher should start");
 
     // Wait for watcher to initialize
     std::thread::sleep(Duration::from_millis(200));
@@ -52,8 +51,7 @@ fn non_rs_file_does_not_trigger_build_signal() {
 
     let (tx, mut rx) = mpsc::channel(8);
     // Watch the `src` subdirectory so is_src_dir = true (only .rs files trigger)
-    let _watcher = start_watcher(&src, 50, tx, Some(&["rs"]))
-        .expect("watcher should start");
+    let _watcher = start_watcher(&src, 50, tx, Some(&["rs"])).expect("watcher should start");
 
     // Wait for watcher to initialize
     std::thread::sleep(Duration::from_millis(200));
@@ -85,8 +83,7 @@ fn dropping_watcher_stops_events() {
     let (tx, mut rx) = mpsc::channel(8);
 
     // Watch the `src` subdirectory so is_src_dir = true (only .rs files trigger)
-    let watcher = start_watcher(&src, 50, tx, Some(&["rs"]))
-        .expect("watcher should start");
+    let watcher = start_watcher(&src, 50, tx, Some(&["rs"])).expect("watcher should start");
 
     // Wait for watcher to initialize
     std::thread::sleep(Duration::from_millis(200));
@@ -252,8 +249,7 @@ async fn watcher_and_coordinator_integration() {
 
     // Start the watcher with the tokio sender
     // The watcher will use blocking_send() internally
-    let _watcher = start_watcher(dir.path(), 50, tx, Some(&["rs"]))
-        .expect("watcher should start");
+    let _watcher = start_watcher(dir.path(), 50, tx, Some(&["rs"])).expect("watcher should start");
 
     // Wait for watcher to initialize
     tokio::time::sleep(Duration::from_millis(200)).await;

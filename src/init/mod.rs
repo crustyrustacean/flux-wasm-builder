@@ -330,9 +330,8 @@ mod tests {
     fn backend_bin_main_uses_tokio_main() {
         let root = tempdir().unwrap();
         scaffold(root.path(), "my-app").unwrap();
-        let contents = std::fs::read_to_string(
-            root.path().join("my-app/backend/src/bin/main.rs")
-        ).unwrap();
+        let contents =
+            std::fs::read_to_string(root.path().join("my-app/backend/src/bin/main.rs")).unwrap();
         assert!(contents.contains("tokio::main"));
     }
 
@@ -347,18 +346,30 @@ mod tests {
     fn backend_has_configuration_directory() {
         let root = tempdir().unwrap();
         scaffold(root.path(), "my-app").unwrap();
-        assert!(root.path().join("my-app/backend/configuration/base.yaml").exists());
-        assert!(root.path().join("my-app/backend/configuration/local.yaml").exists());
-        assert!(root.path().join("my-app/backend/configuration/production.yaml").exists());
+        assert!(
+            root.path()
+                .join("my-app/backend/configuration/base.yaml")
+                .exists()
+        );
+        assert!(
+            root.path()
+                .join("my-app/backend/configuration/local.yaml")
+                .exists()
+        );
+        assert!(
+            root.path()
+                .join("my-app/backend/configuration/production.yaml")
+                .exists()
+        );
     }
 
     #[test]
     fn backend_configuration_default_port_is_3001() {
         let root = tempdir().unwrap();
         scaffold(root.path(), "my-app").unwrap();
-        let contents = std::fs::read_to_string(
-            root.path().join("my-app/backend/configuration/base.yaml")
-        ).unwrap();
+        let contents =
+            std::fs::read_to_string(root.path().join("my-app/backend/configuration/base.yaml"))
+                .unwrap();
         assert!(contents.contains("3001"));
     }
 
@@ -381,9 +392,8 @@ mod tests {
     fn backend_api_health_check_returns_api_response() {
         let root = tempdir().unwrap();
         scaffold(root.path(), "my-app").unwrap();
-        let contents = std::fs::read_to_string(
-            root.path().join("my-app/backend/src/api/mod.rs")
-        ).unwrap();
+        let contents =
+            std::fs::read_to_string(root.path().join("my-app/backend/src/api/mod.rs")).unwrap();
         assert!(contents.contains("ApiResponse"));
     }
 
@@ -521,9 +531,9 @@ mod tests {
     fn backend_configuration_rs_has_find_configuration_dir() {
         let root = tempdir().unwrap();
         scaffold(root.path(), "my-app").unwrap();
-        let contents = std::fs::read_to_string(
-            root.path().join("my-app/backend/src/configuration.rs")
-        ).unwrap();
+        let contents =
+            std::fs::read_to_string(root.path().join("my-app/backend/src/configuration.rs"))
+                .unwrap();
         assert!(
             contents.contains("find_configuration_dir"),
             "configuration.rs should have find_configuration_dir function"
@@ -534,9 +544,9 @@ mod tests {
     fn backend_configuration_rs_has_effective_port() {
         let root = tempdir().unwrap();
         scaffold(root.path(), "my-app").unwrap();
-        let contents = std::fs::read_to_string(
-            root.path().join("my-app/backend/src/configuration.rs")
-        ).unwrap();
+        let contents =
+            std::fs::read_to_string(root.path().join("my-app/backend/src/configuration.rs"))
+                .unwrap();
         assert!(
             contents.contains("effective_port"),
             "configuration.rs should have effective_port method"

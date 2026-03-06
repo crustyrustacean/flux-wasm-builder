@@ -65,38 +65,33 @@ pub fn start_watcher(
 
     let mut debouncer = new_debouncer(
         Duration::from_millis(debounce_ms),
-        move |result: DebounceEventResult| {
-            match result {
-                Ok(events) => {
-                    let should_trigger = match extensions {
-                        Some(exts) => events.iter().any(|e| {
-                            e.path
-                                .extension()
-                                .and_then(|ext| ext.to_str())
-                                .map(|ext| exts.contains(&ext))
-                                .unwrap_or(false)
-                        }),
-                        None => !events.is_empty(),
-                    };
+        move |result: DebounceEventResult| match result {
+            Ok(events) => {
+                let should_trigger = match extensions {
+                    Some(exts) => events.iter().any(|e| {
+                        e.path
+                            .extension()
+                            .and_then(|ext| ext.to_str())
+                            .map(|ext| exts.contains(&ext))
+                            .unwrap_or(false)
+                    }),
+                    None => !events.is_empty(),
+                };
 
-                    if should_trigger {
+                if should_trigger {
+                    tracing::debug!(event_count = events.len(), "file change detected");
+                    if let Err(e) = build_tx.blocking_send(()) {
                         tracing::debug!(
-                            event_count = events.len(),
-                            "file change detected"
+                            error = %e,
+                            "build channel closed — watcher callback exiting"
                         );
-                        if let Err(e) = build_tx.blocking_send(()) {
-                            tracing::debug!(
-                                error = %e,
-                                "build channel closed — watcher callback exiting"
-                            );
-                        }
-                    } else {
-                        tracing::trace!("ignored file event (extension not matched)");
                     }
+                } else {
+                    tracing::trace!("ignored file event (extension not matched)");
                 }
-                Err(e) => {
-                    tracing::warn!(error = %e, "file watcher error");
-                }
+            }
+            Err(e) => {
+                tracing::warn!(error = %e, "file watcher error");
             }
         },
     )?;
@@ -128,8 +123,8 @@ mod tests {
         std::fs::write(src.join("lib.rs"), b"// initial").unwrap();
 
         let (tx, mut rx) = mpsc::channel(8);
-        let _watcher = start_watcher(dir.path(), 50, tx, Some(&["rs"]))
-            .expect("watcher should start");
+        let _watcher =
+            start_watcher(dir.path(), 50, tx, Some(&["rs"])).expect("watcher should start");
 
         // Wait for watcher to initialize
         std::thread::sleep(Duration::from_millis(200));
@@ -158,8 +153,8 @@ mod tests {
         std::fs::create_dir(&src).unwrap();
 
         let (tx, mut rx) = mpsc::channel(8);
-        let _watcher = start_watcher(dir.path(), 50, tx, Some(&["rs"]))
-            .expect("watcher should start");
+        let _watcher =
+            start_watcher(dir.path(), 50, tx, Some(&["rs"])).expect("watcher should start");
 
         // Wait for watcher to initialize
         std::thread::sleep(Duration::from_millis(200));
@@ -190,8 +185,7 @@ mod tests {
 
         let (tx, mut rx) = mpsc::channel(8);
 
-        let watcher = start_watcher(&src, 50, tx, Some(&["rs"]))
-            .expect("watcher should start");
+        let watcher = start_watcher(&src, 50, tx, Some(&["rs"])).expect("watcher should start");
 
         // Wait for watcher to initialize
         std::thread::sleep(Duration::from_millis(200));
@@ -240,8 +234,7 @@ mod tests {
         std::fs::write(src.join("lib.rs"), b"// initial").unwrap();
 
         let (tx, mut rx) = mpsc::channel(8);
-        let _watcher = start_watcher(&src, 100, tx, Some(&["rs"]))
-            .expect("watcher should start");
+        let _watcher = start_watcher(&src, 100, tx, Some(&["rs"])).expect("watcher should start");
 
         // Wait for watcher to initialize
         std::thread::sleep(Duration::from_millis(200));
@@ -277,8 +270,8 @@ mod tests {
         std::fs::write(styles.join("screen.scss"), "body { color: red; }").unwrap();
 
         let (tx, mut rx) = mpsc::channel(8);
-        let _watcher = start_watcher(dir.path(), 50, tx, Some(&["scss"]))
-            .expect("watcher should start");
+        let _watcher =
+            start_watcher(dir.path(), 50, tx, Some(&["scss"])).expect("watcher should start");
 
         std::thread::sleep(Duration::from_millis(200));
 
@@ -286,9 +279,7 @@ mod tests {
 
         let result = std::thread::spawn(move || {
             let rt = tokio::runtime::Runtime::new().unwrap();
-            rt.block_on(async {
-                tokio::time::timeout(Duration::from_secs(3), rx.recv()).await
-            })
+            rt.block_on(async { tokio::time::timeout(Duration::from_secs(3), rx.recv()).await })
         })
         .join()
         .unwrap();
@@ -306,8 +297,8 @@ mod tests {
         std::fs::create_dir(&src).unwrap();
 
         let (tx, mut rx) = mpsc::channel(8);
-        let _watcher = start_watcher(dir.path(), 50, tx, Some(&["scss"]))
-            .expect("watcher should start");
+        let _watcher =
+            start_watcher(dir.path(), 50, tx, Some(&["scss"])).expect("watcher should start");
 
         std::thread::sleep(Duration::from_millis(200));
 
@@ -315,9 +306,7 @@ mod tests {
 
         let result = std::thread::spawn(move || {
             let rt = tokio::runtime::Runtime::new().unwrap();
-            rt.block_on(async {
-                tokio::time::timeout(Duration::from_millis(600), rx.recv()).await
-            })
+            rt.block_on(async { tokio::time::timeout(Duration::from_millis(600), rx.recv()).await })
         })
         .join()
         .unwrap();
@@ -334,8 +323,7 @@ mod tests {
         std::fs::write(dir.path().join("logo.png"), b"\x89PNG").unwrap();
 
         let (tx, mut rx) = mpsc::channel(8);
-        let _watcher = start_watcher(dir.path(), 50, tx, None)
-            .expect("watcher should start");
+        let _watcher = start_watcher(dir.path(), 50, tx, None).expect("watcher should start");
 
         std::thread::sleep(Duration::from_millis(200));
 
@@ -343,9 +331,7 @@ mod tests {
 
         let result = std::thread::spawn(move || {
             let rt = tokio::runtime::Runtime::new().unwrap();
-            rt.block_on(async {
-                tokio::time::timeout(Duration::from_secs(3), rx.recv()).await
-            })
+            rt.block_on(async { tokio::time::timeout(Duration::from_secs(3), rx.recv()).await })
         })
         .join()
         .unwrap();

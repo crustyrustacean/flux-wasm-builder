@@ -112,8 +112,7 @@ pub fn backend_tests_api_main_rs() -> &'static str {
 /// Backend tests/api/helpers.rs
 pub fn backend_tests_api_helpers_rs(name: &str) -> String {
     let crate_name = name.replace('-', "_");
-    include_str!("templates/backend/tests/api/helpers.rs")
-        .replace("{{crate_name}}", &crate_name)
+    include_str!("templates/backend/tests/api/helpers.rs").replace("{{crate_name}}", &crate_name)
 }
 
 /// Backend tests/api/health_check.rs
