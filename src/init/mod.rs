@@ -117,37 +117,118 @@ fn write_files(project_root: &Path, name: &str) -> Result<(), InitError> {
 
     let files: Vec<(std::path::PathBuf, String)> = vec![
         // Workspace root
-        (project_root.join("Cargo.toml"),              render_template("workspace/cargo.toml", &ctx)?),
-        (project_root.join(".cargo/config.toml"),      render_template("workspace/cargo-config.toml", &ctx)?),
-        (project_root.join(".gitignore"),              render_template("gitignore", &ctx)?),
+        (
+            project_root.join("Cargo.toml"),
+            render_template("workspace/cargo.toml", &ctx)?,
+        ),
+        (
+            project_root.join(".cargo/config.toml"),
+            render_template("workspace/cargo-config.toml", &ctx)?,
+        ),
+        (
+            project_root.join(".gitignore"),
+            render_template("gitignore", &ctx)?,
+        ),
         // Backend
-        (project_root.join("backend/Cargo.toml"),                       render_template("backend/cargo.toml", &ctx)?),
-        (project_root.join("flux.toml"),                                render_template("backend/flux.toml", &ctx)?),
-        (project_root.join("backend/build.rs"),                         render_template("backend/build.rs", &ctx)?),
-        (project_root.join("backend/src/bin/main.rs"),                  render_template("backend/src/bin/main.rs", &ctx)?),
-        (project_root.join("backend/src/lib.rs"),                       render_template("backend/src/lib.rs", &ctx)?),
-        (project_root.join("backend/src/configuration.rs"),             render_template("backend/src/configuration.rs", &ctx)?),
-        (project_root.join("backend/src/error.rs"),                     render_template("backend/src/error.rs", &ctx)?),
-        (project_root.join("backend/src/response.rs"),                  render_template("backend/src/response.rs", &ctx)?),
-        (project_root.join("backend/src/telemetry.rs"),                 render_template("backend/src/telemetry.rs", &ctx)?),
-        (project_root.join("backend/src/startup.rs"),                   render_template("backend/src/startup.rs", &ctx)?),
-        (project_root.join("backend/src/static_assets.rs"),             render_template("backend/src/static_assets.rs", &ctx)?),
-        (project_root.join("backend/src/api/mod.rs"),                   render_template("backend/api/mod.rs", &ctx)?),
-        (project_root.join("backend/configuration/base.yaml"),          render_template("backend/configuration/base.yaml", &ctx)?),
-        (project_root.join("backend/configuration/local.yaml"),         render_template("backend/configuration/local.yaml", &ctx)?),
-        (project_root.join("backend/configuration/production.yaml"),    render_template("backend/configuration/production.yaml", &ctx)?),
-        (project_root.join("backend/tests/api/main.rs"),                render_template("backend/tests/api/main.rs", &ctx)?),
-        (project_root.join("backend/tests/api/helpers.rs"),             render_template("backend/tests/api/helpers.rs", &ctx)?),
-        (project_root.join("backend/tests/api/health_check.rs"),        render_template("backend/tests/api/health_check.rs", &ctx)?),
+        (
+            project_root.join("backend/Cargo.toml"),
+            render_template("backend/cargo.toml", &ctx)?,
+        ),
+        (
+            project_root.join("flux.toml"),
+            render_template("backend/flux.toml", &ctx)?,
+        ),
+        (
+            project_root.join("backend/build.rs"),
+            render_template("backend/build.rs", &ctx)?,
+        ),
+        (
+            project_root.join("backend/src/bin/main.rs"),
+            render_template("backend/src/bin/main.rs", &ctx)?,
+        ),
+        (
+            project_root.join("backend/src/lib.rs"),
+            render_template("backend/src/lib.rs", &ctx)?,
+        ),
+        (
+            project_root.join("backend/src/configuration.rs"),
+            render_template("backend/src/configuration.rs", &ctx)?,
+        ),
+        (
+            project_root.join("backend/src/error.rs"),
+            render_template("backend/src/error.rs", &ctx)?,
+        ),
+        (
+            project_root.join("backend/src/response.rs"),
+            render_template("backend/src/response.rs", &ctx)?,
+        ),
+        (
+            project_root.join("backend/src/telemetry.rs"),
+            render_template("backend/src/telemetry.rs", &ctx)?,
+        ),
+        (
+            project_root.join("backend/src/startup.rs"),
+            render_template("backend/src/startup.rs", &ctx)?,
+        ),
+        (
+            project_root.join("backend/src/static_assets.rs"),
+            render_template("backend/src/static_assets.rs", &ctx)?,
+        ),
+        (
+            project_root.join("backend/src/api/mod.rs"),
+            render_template("backend/api/mod.rs", &ctx)?,
+        ),
+        (
+            project_root.join("backend/configuration/base.yaml"),
+            render_template("backend/configuration/base.yaml", &ctx)?,
+        ),
+        (
+            project_root.join("backend/configuration/local.yaml"),
+            render_template("backend/configuration/local.yaml", &ctx)?,
+        ),
+        (
+            project_root.join("backend/configuration/production.yaml"),
+            render_template("backend/configuration/production.yaml", &ctx)?,
+        ),
+        (
+            project_root.join("backend/tests/api/main.rs"),
+            render_template("backend/tests/api/main.rs", &ctx)?,
+        ),
+        (
+            project_root.join("backend/tests/api/helpers.rs"),
+            render_template("backend/tests/api/helpers.rs", &ctx)?,
+        ),
+        (
+            project_root.join("backend/tests/api/health_check.rs"),
+            render_template("backend/tests/api/health_check.rs", &ctx)?,
+        ),
         // Frontend
-        (project_root.join("frontend/Cargo.toml"),              render_template("frontend/cargo.toml", &ctx)?),
-        (project_root.join("frontend/index.html"),              render_template("frontend/index.html", &ctx)?),
-        (project_root.join("frontend/src/lib.rs"),              render_template("frontend/lib.rs", &ctx)?),
-        (project_root.join("frontend/styles/screen.scss"),      render_template("frontend/styles/screen.scss", &ctx)?),
-        (project_root.join("frontend/public/.gitkeep"),         String::new()),
+        (
+            project_root.join("frontend/Cargo.toml"),
+            render_template("frontend/cargo.toml", &ctx)?,
+        ),
+        (
+            project_root.join("frontend/index.html"),
+            render_template("frontend/index.html", &ctx)?,
+        ),
+        (
+            project_root.join("frontend/src/lib.rs"),
+            render_template("frontend/lib.rs", &ctx)?,
+        ),
+        (
+            project_root.join("frontend/styles/screen.scss"),
+            render_template("frontend/styles/screen.scss", &ctx)?,
+        ),
+        (project_root.join("frontend/public/.gitkeep"), String::new()),
         // Shared
-        (project_root.join("shared/Cargo.toml"),    render_template("shared/cargo.toml", &ctx)?),
-        (project_root.join("shared/src/lib.rs"),    render_template("shared/lib.rs", &ctx)?),
+        (
+            project_root.join("shared/Cargo.toml"),
+            render_template("shared/cargo.toml", &ctx)?,
+        ),
+        (
+            project_root.join("shared/src/lib.rs"),
+            render_template("shared/lib.rs", &ctx)?,
+        ),
     ];
 
     for (path, content) in &files {

@@ -69,36 +69,108 @@ static TERA: LazyLock<Tera> = LazyLock::new(|| {
 
     tera.add_raw_templates(vec![
         // Workspace
-        ("workspace/cargo.toml",        include_str!("templates/workspace/cargo.toml")),
-        ("workspace/cargo-config.toml", include_str!("templates/workspace/cargo-config.toml")),
-        ("gitignore",                   include_str!("templates/gitignore")),
+        (
+            "workspace/cargo.toml",
+            include_str!("templates/workspace/cargo.toml"),
+        ),
+        (
+            "workspace/cargo-config.toml",
+            include_str!("templates/workspace/cargo-config.toml"),
+        ),
+        ("gitignore", include_str!("templates/gitignore")),
         // Backend
-        ("backend/cargo.toml",                      include_str!("templates/backend/cargo.toml")),
-        ("backend/flux.toml",                       include_str!("templates/backend/flux.toml")),
-        ("backend/build.rs",                        include_str!("templates/backend/build.rs")),
-        ("backend/src/bin/main.rs",                 include_str!("templates/backend/src/bin/main.rs")),
-        ("backend/src/lib.rs",                      include_str!("templates/backend/src/lib.rs")),
-        ("backend/src/configuration.rs",            include_str!("templates/backend/src/configuration.rs")),
-        ("backend/src/error.rs",                    include_str!("templates/backend/src/error.rs")),
-        ("backend/src/response.rs",                 include_str!("templates/backend/src/response.rs")),
-        ("backend/src/telemetry.rs",                include_str!("templates/backend/src/telemetry.rs")),
-        ("backend/src/startup.rs",                  include_str!("templates/backend/src/startup.rs")),
-        ("backend/src/static_assets.rs",            include_str!("templates/backend/src/static_assets.rs")),
-        ("backend/api/mod.rs",                      include_str!("templates/backend/api/mod.rs")),
-        ("backend/configuration/base.yaml",         include_str!("templates/backend/configuration/base.yaml")),
-        ("backend/configuration/local.yaml",        include_str!("templates/backend/configuration/local.yaml")),
-        ("backend/configuration/production.yaml",   include_str!("templates/backend/configuration/production.yaml")),
-        ("backend/tests/api/main.rs",               include_str!("templates/backend/tests/api/main.rs")),
-        ("backend/tests/api/helpers.rs",            include_str!("templates/backend/tests/api/helpers.rs")),
-        ("backend/tests/api/health_check.rs",       include_str!("templates/backend/tests/api/health_check.rs")),
+        (
+            "backend/cargo.toml",
+            include_str!("templates/backend/cargo.toml"),
+        ),
+        (
+            "backend/flux.toml",
+            include_str!("templates/backend/flux.toml"),
+        ),
+        (
+            "backend/build.rs",
+            include_str!("templates/backend/build.rs"),
+        ),
+        (
+            "backend/src/bin/main.rs",
+            include_str!("templates/backend/src/bin/main.rs"),
+        ),
+        (
+            "backend/src/lib.rs",
+            include_str!("templates/backend/src/lib.rs"),
+        ),
+        (
+            "backend/src/configuration.rs",
+            include_str!("templates/backend/src/configuration.rs"),
+        ),
+        (
+            "backend/src/error.rs",
+            include_str!("templates/backend/src/error.rs"),
+        ),
+        (
+            "backend/src/response.rs",
+            include_str!("templates/backend/src/response.rs"),
+        ),
+        (
+            "backend/src/telemetry.rs",
+            include_str!("templates/backend/src/telemetry.rs"),
+        ),
+        (
+            "backend/src/startup.rs",
+            include_str!("templates/backend/src/startup.rs"),
+        ),
+        (
+            "backend/src/static_assets.rs",
+            include_str!("templates/backend/src/static_assets.rs"),
+        ),
+        (
+            "backend/api/mod.rs",
+            include_str!("templates/backend/api/mod.rs"),
+        ),
+        (
+            "backend/configuration/base.yaml",
+            include_str!("templates/backend/configuration/base.yaml"),
+        ),
+        (
+            "backend/configuration/local.yaml",
+            include_str!("templates/backend/configuration/local.yaml"),
+        ),
+        (
+            "backend/configuration/production.yaml",
+            include_str!("templates/backend/configuration/production.yaml"),
+        ),
+        (
+            "backend/tests/api/main.rs",
+            include_str!("templates/backend/tests/api/main.rs"),
+        ),
+        (
+            "backend/tests/api/helpers.rs",
+            include_str!("templates/backend/tests/api/helpers.rs"),
+        ),
+        (
+            "backend/tests/api/health_check.rs",
+            include_str!("templates/backend/tests/api/health_check.rs"),
+        ),
         // Frontend
-        ("frontend/cargo.toml",         include_str!("templates/frontend/cargo.toml")),
-        ("frontend/index.html",         include_str!("templates/frontend/index.html")),
-        ("frontend/lib.rs",             include_str!("templates/frontend/lib.rs")),
-        ("frontend/styles/screen.scss", include_str!("templates/frontend/styles/screen.scss")),
+        (
+            "frontend/cargo.toml",
+            include_str!("templates/frontend/cargo.toml"),
+        ),
+        (
+            "frontend/index.html",
+            include_str!("templates/frontend/index.html"),
+        ),
+        ("frontend/lib.rs", include_str!("templates/frontend/lib.rs")),
+        (
+            "frontend/styles/screen.scss",
+            include_str!("templates/frontend/styles/screen.scss"),
+        ),
         // Shared
-        ("shared/cargo.toml", include_str!("templates/shared/cargo.toml")),
-        ("shared/lib.rs",     include_str!("templates/shared/lib.rs")),
+        (
+            "shared/cargo.toml",
+            include_str!("templates/shared/cargo.toml"),
+        ),
+        ("shared/lib.rs", include_str!("templates/shared/lib.rs")),
     ])
     .expect("failed to load embedded templates — this is a bug in wasm-drydock");
 
