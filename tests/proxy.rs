@@ -21,7 +21,11 @@ fn make_config(backend_port: u16) -> FluxConfig {
 async fn proxy_returns_502_when_backend_unreachable() {
     // Port 19999 should have nothing listening
     let config = make_config(19999);
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .connect_timeout(std::time::Duration::from_secs(2))
+        .timeout(std::time::Duration::from_secs(3))
+        .build()
+        .unwrap();
 
     let app = test::init_service(
         App::new()
