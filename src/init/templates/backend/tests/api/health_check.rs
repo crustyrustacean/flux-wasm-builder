@@ -1,7 +1,7 @@
 // tests/api/health_check.rs
 
 use crate::helpers::spawn_app;
-use {{crate_name}}_backend::response::ApiResponse;
+use {{ crate_name }}_backend::response::ApiResponse;
 
 #[tokio::test]
 async fn health_check_returns_200_with_success_body() {

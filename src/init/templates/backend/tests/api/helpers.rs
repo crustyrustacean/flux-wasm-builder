@@ -1,8 +1,8 @@
 // tests/api/helpers.rs
 
-use {{crate_name}}_backend::configuration::get_configuration;
-use {{crate_name}}_backend::startup::Application;
-use {{crate_name}}_backend::telemetry::{get_subscriber, init_subscriber};
+use {{ crate_name }}_backend::configuration::get_configuration;
+use {{ crate_name }}_backend::startup::Application;
+use {{ crate_name }}_backend::telemetry::{get_subscriber, init_subscriber};
 use std::sync::LazyLock;
 
 static TRACING: LazyLock<()> = LazyLock::new(|| {

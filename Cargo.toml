@@ -25,6 +25,7 @@ serde = { version = "1.0.228", features = ["derive"] }
 toml = "1.0.3"
 reqwest = "0.13.2"
 grass = "0.13.4"
+tera = "1"
 
 [dependencies.include_dir]
 version = "0.7"

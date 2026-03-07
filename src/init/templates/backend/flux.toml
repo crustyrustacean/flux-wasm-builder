@@ -1,5 +1,5 @@
 [project]
-name = "{{name}}"
+name = "{{ name }}"
 
 [dev]
 public_port = 8080
