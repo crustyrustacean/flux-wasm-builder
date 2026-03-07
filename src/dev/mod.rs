@@ -161,7 +161,7 @@ impl ProcessManager {
             config.dev.backend_port
         );
 
-        let max_attempts = 30;
+        let max_attempts = 120;
         let mut attempts = 0;
 
         loop {
