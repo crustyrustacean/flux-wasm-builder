@@ -2,7 +2,7 @@
 
 use crate::response::ApiResponse;
 use actix_web::{HttpResponse, Responder, web};
-use {{crate_name}}_shared::{HelloResponse, StatusResponse};
+use {{ crate_name }}_shared::{HelloResponse, StatusResponse};
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(

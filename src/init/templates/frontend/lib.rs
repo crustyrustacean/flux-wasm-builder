@@ -1,6 +1,6 @@
 use yew::prelude::*;
 use gloo_net::http::Request;
-use {{crate_name}}_shared::{HelloResponse, StatusResponse};
+use {{ crate_name }}_shared::{HelloResponse, StatusResponse};
 
 #[component(App)]
 fn app() -> Html {
