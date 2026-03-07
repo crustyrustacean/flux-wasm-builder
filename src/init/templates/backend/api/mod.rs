@@ -1,8 +1,7 @@
 // src/api/mod.rs
 
-use crate::response::ApiResponse;
 use actix_web::{HttpResponse, Responder, web};
-use {{ crate_name }}_shared::{HelloResponse, StatusResponse};
+use {{ crate_name }}_shared::{ApiResponse, HelloResponse, StatusResponse};
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(
@@ -14,7 +13,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 }
 
 async fn health_check() -> impl Responder {
-    ApiResponse::success(())
+    HttpResponse::Ok().json(ApiResponse::success(()))
 }
 
 async fn hello() -> impl Responder {
