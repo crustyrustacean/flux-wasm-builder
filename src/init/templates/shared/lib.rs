@@ -1,6 +1,31 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApiResponse<T> {
+    pub success: bool,
+    pub data: Option<T>,
+    pub error: Option<String>,
+}
+
+impl<T: Serialize> ApiResponse<T> {
+    pub fn success(data: T) -> Self {
+        Self {
+            success: true,
+            data: Some(data),
+            error: None,
+        }
+    }
+
+    pub fn error(message: &str) -> Self {
+        Self {
+            success: false,
+            data: None,
+            error: Some(message.to_string()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HelloResponse {
     pub message: String,
 }
@@ -16,6 +41,8 @@ pub struct StatusResponse {
 const _: fn() = || {
     fn assert_serialize<T: serde::Serialize>() {}
     fn assert_deserialize<T: for<'de> serde::Deserialize<'de>>() {}
+    assert_serialize::<ApiResponse<()>>();
+    assert_deserialize::<ApiResponse<()>>();
     assert_serialize::<HelloResponse>();
     assert_deserialize::<HelloResponse>();
     assert_serialize::<StatusResponse>();
