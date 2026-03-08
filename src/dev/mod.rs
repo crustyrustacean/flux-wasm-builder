@@ -192,6 +192,24 @@ pub async fn run(open_browser: bool) -> Result<(), DevError> {
         }
     });
 
+    // Core watcher: frontend/*.html → Page reload
+    let (html_tx, mut html_rx) = tokio::sync::mpsc::channel::<()>(8);
+    let html_watch_path = std::env::current_dir()?.join("frontend");
+    watchers.push(start_watcher(
+        &html_watch_path,
+        config.dev.watch_debounce_ms,
+        html_tx,
+        Some(&["html"]),
+    )?);
+
+    let reload_tx_for_html = reload_tx.clone();
+    tokio::spawn(async move {
+        while let Some(()) = html_rx.recv().await {
+            tracing::info!("HTML change detected — reloading browser");
+            let _ = reload_tx_for_html.send(DevServerMessage::Reload);
+        }
+    });
+
     // Custom watchers from configuration
     // Clone the watch configs to avoid lifetime issues with the loop
     let custom_watches: Vec<_> = config.watch.clone();

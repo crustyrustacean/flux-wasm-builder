@@ -19,6 +19,7 @@ This starts a dev server on port 8080 that:
 - Watches `backend/src/` and restarts the backend on changes
 - Watches `frontend/styles/` and recompiles SCSS on changes
 - Watches `frontend/public/` and triggers a browser reload on changes
+- Watches `frontend/` for `.html` changes and triggers a browser reload
 - Signals the browser to reload after successful builds
 
 The generated project contains only user code — API handlers, Yew components, shared types, and styles. The tool handles everything else.
@@ -164,7 +165,7 @@ action = "rebuild"
 - Paths are relative to the project root
 - Empty `extensions` array watches all files
 - Non-existent paths are logged as warnings and skipped
-- Core watchers (`frontend/src`, `backend/src`, `frontend/public`, `frontend/styles`) are always active
+- Core watchers (`frontend/src`, `backend/src`, `frontend/public`, `frontend/styles`, `frontend/`) are always active
 
 ## Architecture
 
@@ -186,6 +187,7 @@ The tool runs four core file watchers simultaneously (always active):
 | Backend | `backend/src/` | `.rs` | Kill backend, respawn, health check, then browser reload |
 | Styles | `frontend/styles/` | `.scss` | Recompile SCSS in memory, browser reload |
 | Public assets | `frontend/public/` | any file | Browser reload |
+| HTML | `frontend/` | `.html` | Browser reload |
 
 Additional custom watchers can be configured via `[[watch]]` entries in `drydock.toml` (see [Custom Watch Paths](#custom-watch-paths)).
 
