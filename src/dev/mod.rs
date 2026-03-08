@@ -266,9 +266,6 @@ pub async fn run(open_browser: bool) -> Result<(), DevError> {
         }
     }
 
-    // Store watchers so they don't get dropped (they must live for process lifetime)
-    std::mem::forget(watchers);
-
     let reload_tx_clone = reload_tx.clone();
     let build_config = BuildConfig::new(std::env::current_dir()?.join("frontend"));
     println!("Building frontend...");
@@ -305,7 +302,7 @@ pub async fn run(open_browser: bool) -> Result<(), DevError> {
         }
     }
 
-    serve(&config, build_config_for_serve, reload_tx, css_bytes).await?;
+    serve(&config, build_config_for_serve, reload_tx, css_bytes, watchers).await?;
 
     Ok(())
 }
