@@ -10,6 +10,7 @@ use std::future::Future;
 use tokio::sync::{broadcast, mpsc::Receiver};
 
 use super::wasm_pack::BuildError;
+use super::DevServerMessage;
 
 /// Run the build loop, serializing rebuild requests.
 ///
@@ -58,7 +59,7 @@ use super::wasm_pack::BuildError;
 /// ```
 pub async fn run_build_loop<F, Fut>(
     mut build_rx: Receiver<()>,
-    reload_tx: broadcast::Sender<()>,
+    reload_tx: broadcast::Sender<DevServerMessage>,
     build_fn: F,
 ) where
     F: Fn() -> Fut + Send + 'static,
@@ -95,11 +96,12 @@ pub async fn run_build_loop<F, Fut>(
                 // The `let _ =` is intentional: send returns Err when there
                 // are no active subscribers, which is expected when no browser
                 // tabs are open. This must not be treated as an error.
-                let _ = reload_tx.send(());
+                let _ = reload_tx.send(DevServerMessage::Reload);
             }
             Err(ref e) => {
                 // Build failure is NOT fatal to the loop — continue watching
                 tracing::warn!(parent: &span, error = %e, "rebuild failed — previous assets still served");
+                let _ = reload_tx.send(DevServerMessage::BuildError(e.to_string()));
             }
         }
 
@@ -120,7 +122,7 @@ mod tests {
     #[tokio::test]
     async fn single_trigger_causes_one_build() {
         let (tx, rx) = mpsc::channel(8);
-        let (reload_tx, _reload_rx) = broadcast::channel::<()>(16);
+        let (reload_tx, _reload_rx) = broadcast::channel::<DevServerMessage>(16);
         let count = Arc::new(Mutex::new(0u32));
         let c = count.clone();
 
@@ -142,7 +144,7 @@ mod tests {
     #[tokio::test]
     async fn rapid_triggers_collapse_to_at_most_two_builds() {
         let (tx, rx) = mpsc::channel(8);
-        let (reload_tx, _reload_rx) = broadcast::channel::<()>(16);
+        let (reload_tx, _reload_rx) = broadcast::channel::<DevServerMessage>(16);
         let count = Arc::new(Mutex::new(0u32));
         let c = count.clone();
 
@@ -171,7 +173,7 @@ mod tests {
     #[tokio::test]
     async fn build_failure_does_not_block_subsequent_builds() {
         let (tx, rx) = mpsc::channel(8);
-        let (reload_tx, _reload_rx) = broadcast::channel::<()>(16);
+        let (reload_tx, _reload_rx) = broadcast::channel::<DevServerMessage>(16);
         let count = Arc::new(Mutex::new(0u32));
         let first = Arc::new(Mutex::new(true));
         let c = count.clone();
@@ -209,7 +211,7 @@ mod tests {
     #[tokio::test]
     async fn closed_channel_exits_loop_cleanly() {
         let (tx, rx) = mpsc::channel::<()>(8);
-        let (reload_tx, _reload_rx) = broadcast::channel::<()>(16);
+        let (reload_tx, _reload_rx) = broadcast::channel::<DevServerMessage>(16);
         let count = Arc::new(Mutex::new(0u32));
         let c = count.clone();
 
@@ -234,7 +236,7 @@ mod tests {
     #[tokio::test]
     async fn builds_run_sequentially_not_concurrently() {
         let (tx, rx) = mpsc::channel(8);
-        let (reload_tx, _reload_rx) = broadcast::channel::<()>(16);
+        let (reload_tx, _reload_rx) = broadcast::channel::<DevServerMessage>(16);
         let concurrent_count = Arc::new(Mutex::new(0u32));
         let max_concurrent = Arc::new(Mutex::new(0u32));
         let cc = concurrent_count.clone();
@@ -285,7 +287,7 @@ mod tests {
     #[tokio::test]
     async fn pending_flag_triggers_immediate_rebuild() {
         let (tx, rx) = mpsc::channel(8);
-        let (reload_tx, _reload_rx) = broadcast::channel::<()>(16);
+        let (reload_tx, _reload_rx) = broadcast::channel::<DevServerMessage>(16);
         let build_times = Arc::new(Mutex::new(Vec::new()));
         let bt = build_times.clone();
 

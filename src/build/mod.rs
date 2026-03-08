@@ -44,6 +44,19 @@ pub use watcher::{FileWatcher, start_watcher};
 #[cfg(not(feature = "embed-assets"))]
 pub use reload::{RELOAD_SCRIPT, inject_reload_script, ws_reload_handler};
 
+/// Messages sent over the dev-server broadcast channel.
+///
+/// The channel carries typed messages so that the WebSocket handler can
+/// distinguish between a successful build (→ page reload) and a failed
+/// build (→ browser error overlay).
+#[derive(Clone, Debug)]
+pub enum DevServerMessage {
+    /// A build or asset change completed successfully — reload the page.
+    Reload,
+    /// A build failed — display the provided error message as an overlay.
+    BuildError(String),
+}
+
 /// Flag indicating whether the server is running in development mode.
 ///
 /// In dev mode:

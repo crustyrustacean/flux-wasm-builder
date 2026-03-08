@@ -17,6 +17,8 @@ use actix_ws::Message;
 use futures_util::stream::StreamExt;
 use tokio::sync::broadcast;
 
+use super::DevServerMessage;
+
 /// JavaScript that establishes a WebSocket connection to /ws/reload
 /// and reloads the page when a message is received.
 ///
@@ -32,10 +34,52 @@ use tokio::sync::broadcast;
 /// It is NOT present in the `index.html` file on disk.
 pub const RELOAD_SCRIPT: &str = r#"<script>
 (function() {
+  function removeOverlay() {
+    var existing = document.getElementById('__drydock_error__');
+    if (existing) existing.remove();
+  }
+
+  function showOverlay(message) {
+    removeOverlay();
+    var overlay = document.createElement('div');
+    overlay.id = '__drydock_error__';
+    overlay.style.cssText = [
+      'position: fixed',
+      'top: 0',
+      'left: 0',
+      'width: 100%',
+      'height: 100%',
+      'background: rgba(0,0,0,0.85)',
+      'color: #ff5555',
+      'font-family: monospace',
+      'font-size: 14px',
+      'padding: 2rem',
+      'box-sizing: border-box',
+      'z-index: 2147483647',
+      'white-space: pre-wrap',
+      'overflow: auto',
+    ].join(';');
+    var heading = document.createElement('div');
+    heading.style.cssText = 'font-size: 1.2rem; margin-bottom: 1rem; color: #ff5555;';
+    heading.textContent = 'Build Failed';
+    var body = document.createElement('div');
+    body.textContent = message;
+    overlay.appendChild(heading);
+    overlay.appendChild(body);
+    document.body.appendChild(overlay);
+  }
+
   function connect() {
-    const ws = new WebSocket('ws://' + location.host + '/ws/reload');
-    ws.onmessage = () => location.reload();
-    ws.onclose = () => setTimeout(connect, 1000);
+    var ws = new WebSocket('ws://' + location.host + '/ws/reload');
+    ws.onmessage = function(event) {
+      if (event.data === 'reload') {
+        removeOverlay();
+        location.reload();
+      } else if (event.data.startsWith('error:')) {
+        showOverlay(event.data.slice(6));
+      }
+    };
+    ws.onclose = function() { setTimeout(connect, 1000); };
   }
   connect();
 })();
@@ -118,7 +162,7 @@ pub fn inject_reload_script(html: &str) -> String {
 pub async fn ws_reload_handler(
     req: HttpRequest,
     body: web::Payload,
-    reload_tx: web::Data<broadcast::Sender<()>>,
+    reload_tx: web::Data<broadcast::Sender<DevServerMessage>>,
 ) -> Result<HttpResponse, actix_web::Error> {
     let peer = req
         .peer_addr()
@@ -162,9 +206,17 @@ pub async fn ws_reload_handler(
                 // Reload signal from build coordinator
                 result = reload_rx.recv() => {
                     match result {
-                        Ok(()) => {
+                        Ok(DevServerMessage::Reload) => {
                             tracing::debug!("sending reload signal to browser");
                             if session.text("reload").await.is_err() {
+                                tracing::debug!("WebSocket send failed — client disconnected");
+                                break;
+                            }
+                        }
+                        Ok(DevServerMessage::BuildError(msg)) => {
+                            tracing::debug!("sending build error to browser");
+                            let payload = format!("error:{}", msg);
+                            if session.text(payload).await.is_err() {
                                 tracing::debug!("WebSocket send failed — client disconnected");
                                 break;
                             }
@@ -273,9 +325,9 @@ mod tests {
 
     #[test]
     fn broadcast_send_with_no_receivers_does_not_panic() {
-        let (tx, _rx) = broadcast::channel::<()>(16);
+        let (tx, _rx) = broadcast::channel::<DevServerMessage>(16);
         drop(_rx);
-        let result = tx.send(());
+        let result = tx.send(DevServerMessage::Reload);
         // The send returns Err when there are no receivers
         // This is expected and acceptable behavior
         assert!(result.is_err(), "send should return Err when no receivers");
@@ -283,8 +335,8 @@ mod tests {
 
     #[test]
     fn broadcast_send_with_receivers_succeeds() {
-        let (tx, _rx) = broadcast::channel::<()>(16);
-        let result = tx.send(());
+        let (tx, _rx) = broadcast::channel::<DevServerMessage>(16);
+        let result = tx.send(DevServerMessage::Reload);
         assert!(result.is_ok(), "send should succeed when receivers exist");
     }
 }
