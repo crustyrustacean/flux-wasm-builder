@@ -1,0 +1,9 @@
+[book]
+title = "wasm-drydock"
+authors = ["Jeffery D. Mitchell"]
+language = "en"
+src = "src"
+
+[output.html]
+git-repository-url = "https://github.com/crustyrustacean/wasm-drydock"
+edit-url-template = "https://github.com/crustyrustacean/wasm-drydock/edit/trunk/docs/src/{path}"
