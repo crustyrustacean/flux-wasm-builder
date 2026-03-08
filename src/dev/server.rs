@@ -2,7 +2,9 @@
 
 // dependencies
 use crate::DevMode;
-use crate::build::{BuildConfig, FileWatcher, serve_pkg_file, spa_fallback, ws_reload_handler};
+use crate::build::{
+    BuildConfig, DevServerMessage, FileWatcher, serve_pkg_file, spa_fallback, ws_reload_handler,
+};
 use crate::dev::DevError;
 use crate::dev::proxy::proxy_handler;
 use crate::dev::styles::styles_handler;
@@ -15,7 +17,7 @@ use tokio::sync::broadcast;
 pub async fn serve(
     config: &DrydockConfig,
     build_config: BuildConfig,
-    reload_tx: broadcast::Sender<()>,
+    reload_tx: broadcast::Sender<DevServerMessage>,
     css_bytes: Arc<RwLock<Vec<u8>>>,
     _watchers: Vec<FileWatcher>,
 ) -> Result<(), DevError> {

@@ -23,7 +23,8 @@
 
 // dependencies
 use crate::build::{
-    BuildConfig, FileWatcher, run_build_loop, run_wasm_pack, scss::compile_scss, start_watcher,
+    BuildConfig, DevServerMessage, FileWatcher, run_build_loop, run_wasm_pack, scss::compile_scss,
+    start_watcher,
 };
 use crate::dev::server::serve;
 use crate::domain::{ConfigError, DrydockConfig, WatchAction};
@@ -55,6 +56,10 @@ pub enum DevError {
     /// File watcher encountered an error
     #[error("file watcher error: {0}")]
     WatcherError(#[from] notify_debouncer_mini::notify::Error),
+
+    /// Initial or incremental wasm-pack build failed
+    #[error("build failed: {0}")]
+    BuildFailed(#[from] crate::build::BuildError),
 }
 
 /// Start the development server
@@ -97,14 +102,23 @@ pub async fn run(open_browser: bool) -> Result<(), DevError> {
     let config = DrydockConfig::from_file(&config_path)?;
 
     let styles_path = std::env::current_dir()?.join("frontend/styles");
-    let initial_css = compile_scss(&styles_path).unwrap_or_default();
+    let initial_css = match compile_scss(&styles_path) {
+        Ok(css) => {
+            tracing::info!("initial SCSS compiled successfully");
+            css
+        }
+        Err(e) => {
+            tracing::warn!(error = %e, "initial SCSS compilation failed — no styles will be served until fixed");
+            Vec::new()
+        }
+    };
     let css_bytes: Arc<RwLock<Vec<u8>>> = Arc::new(RwLock::new(initial_css));
 
     let mut process_manager = ProcessManager::new(&config)?;
     ProcessManager::wait_for_ready(&config).await?;
 
     let (build_tx, build_rx) = tokio::sync::mpsc::channel::<()>(8);
-    let (reload_tx, _reload_rx) = tokio::sync::broadcast::channel::<()>(16); // ← remove the underscore from _reload_rx
+    let (reload_tx, _reload_rx) = tokio::sync::broadcast::channel::<DevServerMessage>(16);
     let (restart_tx, mut restart_rx) = tokio::sync::mpsc::channel::<()>(8);
 
     // Collect all watcher handles so they don't get dropped
@@ -141,7 +155,8 @@ pub async fn run(open_browser: bool) -> Result<(), DevError> {
     let reload_tx_for_public = reload_tx.clone();
     tokio::spawn(async move {
         while let Some(()) = public_rx.recv().await {
-            let _ = reload_tx_for_public.send(());
+            tracing::info!("public asset change detected — reloading browser");
+            let _ = reload_tx_for_public.send(DevServerMessage::Reload);
         }
     });
 
@@ -159,16 +174,19 @@ pub async fn run(open_browser: bool) -> Result<(), DevError> {
     let css_bytes_for_styles = css_bytes.clone();
     tokio::spawn(async move {
         while let Some(()) = styles_rx.recv().await {
+            tracing::info!("SCSS change detected — recompiling");
             let styles_path = std::env::current_dir()
                 .expect("failed to get current dir")
                 .join("frontend/styles");
             match compile_scss(&styles_path) {
                 Ok(new_css) => {
                     *css_bytes_for_styles.write().unwrap() = new_css;
-                    let _ = reload_tx_for_styles.send(());
+                    tracing::info!("SCSS compiled successfully — reloading browser");
+                    let _ = reload_tx_for_styles.send(DevServerMessage::Reload);
                 }
                 Err(e) => {
                     tracing::warn!(error = %e, "SCSS compilation failed — previous styles still served");
+                    let _ = reload_tx_for_styles.send(DevServerMessage::BuildError(e.to_string()));
                 }
             }
         }
@@ -215,10 +233,12 @@ pub async fn run(open_browser: bool) -> Result<(), DevError> {
                 let reload = reload_tx.clone();
                 let path_for_log = watch_config.path.display().to_string();
                 let exts_for_log = watch_config.extensions.clone();
+                let path_for_trigger = path_for_log.clone();
                 watchers.push(start_watcher(&watch_path, debounce_ms, tx, extensions)?);
                 tokio::spawn(async move {
                     while let Some(()) = rx.recv().await {
-                        let _ = reload.send(());
+                        tracing::info!(path = %path_for_trigger, "custom reload watcher triggered — reloading browser");
+                        let _ = reload.send(DevServerMessage::Reload);
                     }
                 });
                 tracing::info!(
@@ -233,11 +253,13 @@ pub async fn run(open_browser: bool) -> Result<(), DevError> {
                 let build = build_tx.clone();
                 let path_for_log = watch_config.path.display().to_string();
                 let exts_for_log = watch_config.extensions.clone();
+                let path_for_trigger = path_for_log.clone();
                 watchers.push(start_watcher(&watch_path, debounce_ms, tx, extensions)?);
                 tokio::spawn(async move {
                     while let Some(()) = rx.recv().await {
+                        tracing::info!(path = %path_for_trigger, "custom rebuild watcher triggered — rebuilding");
                         let _ = build.send(()).await;
-                        let _ = reload.send(());
+                        let _ = reload.send(DevServerMessage::Reload);
                     }
                 });
                 tracing::info!(
@@ -251,9 +273,11 @@ pub async fn run(open_browser: bool) -> Result<(), DevError> {
                 let restart = restart_tx.clone();
                 let path_for_log = watch_config.path.display().to_string();
                 let exts_for_log = watch_config.extensions.clone();
+                let path_for_trigger = path_for_log.clone();
                 watchers.push(start_watcher(&watch_path, debounce_ms, tx, extensions)?);
                 tokio::spawn(async move {
                     while let Some(()) = rx.recv().await {
+                        tracing::info!(path = %path_for_trigger, "custom restart watcher triggered — restarting backend");
                         let _ = restart.send(()).await;
                     }
                 });
@@ -269,9 +293,7 @@ pub async fn run(open_browser: bool) -> Result<(), DevError> {
     let reload_tx_clone = reload_tx.clone();
     let build_config = BuildConfig::new(std::env::current_dir()?.join("frontend"));
     println!("Building frontend...");
-    run_wasm_pack(&build_config)
-        .await
-        .map_err(|_| DevError::Io(std::io::Error::other("initial wasm-pack build failed")))?;
+    run_wasm_pack(&build_config).await?;
     let build_config_for_serve = build_config.clone(); // ← clone before it moves into the spawn
     tokio::spawn(async move {
         run_build_loop(build_rx, reload_tx_clone, move || {
@@ -285,10 +307,12 @@ pub async fn run(open_browser: bool) -> Result<(), DevError> {
     let reload_tx_for_restart = reload_tx.clone();
     tokio::spawn(async move {
         while let Some(()) = restart_rx.recv().await {
+            tracing::info!("backend source change detected — restarting backend");
             if let Err(e) = process_manager.restart(&restart_config).await {
-                eprintln!("Failed to restart backend: {e}");
+                tracing::warn!(error = %e, "backend restart failed");
             } else {
-                let _ = reload_tx_for_restart.send(());
+                tracing::info!("backend restarted successfully — reloading browser");
+                let _ = reload_tx_for_restart.send(DevServerMessage::Reload);
             }
         }
     });

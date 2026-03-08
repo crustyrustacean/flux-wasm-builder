@@ -7,7 +7,8 @@ use actix_web::{App, test as actix_test, web};
 use tempfile::tempdir;
 use tokio::sync::broadcast;
 use wasm_drydock::{
-    BuildConfig, DevMode, RELOAD_SCRIPT, inject_reload_script, spa_fallback, ws_reload_handler,
+    BuildConfig, DevMode, DevServerMessage, RELOAD_SCRIPT, inject_reload_script, spa_fallback,
+    ws_reload_handler,
 };
 
 // =============================================================================
@@ -66,9 +67,9 @@ fn inject_reload_script_preserves_original_content() {
 
 #[test]
 fn broadcast_send_with_no_receivers_does_not_panic() {
-    let (tx, _rx) = broadcast::channel::<()>(16);
+    let (tx, _rx) = broadcast::channel::<DevServerMessage>(16);
     drop(_rx);
-    let result = tx.send(());
+    let result = tx.send(DevServerMessage::Reload);
     // The send returns Err when there are no receivers
     // This is expected and acceptable behavior
     assert!(result.is_err(), "send should return Err when no receivers");
@@ -76,8 +77,8 @@ fn broadcast_send_with_no_receivers_does_not_panic() {
 
 #[test]
 fn broadcast_send_with_receivers_succeeds() {
-    let (tx, _rx) = broadcast::channel::<()>(16);
-    let result = tx.send(());
+    let (tx, _rx) = broadcast::channel::<DevServerMessage>(16);
+    let result = tx.send(DevServerMessage::Reload);
     assert!(result.is_ok(), "send should succeed when receivers exist");
 }
 
@@ -87,7 +88,7 @@ fn broadcast_send_with_receivers_succeeds() {
 
 #[actix_web::test]
 async fn ws_endpoint_returns_101_switching_protocols() {
-    let (tx, _rx) = broadcast::channel::<()>(16);
+    let (tx, _rx) = broadcast::channel::<DevServerMessage>(16);
     let app = actix_test::init_service(
         App::new()
             .app_data(web::Data::new(tx))

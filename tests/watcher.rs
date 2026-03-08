@@ -7,7 +7,7 @@ use std::time::Duration;
 
 use tempfile::tempdir;
 use tokio::sync::{broadcast, mpsc};
-use wasm_drydock::{BuildError, run_build_loop, start_watcher};
+use wasm_drydock::{BuildError, DevServerMessage, run_build_loop, start_watcher};
 
 // =============================================================================
 // Watcher Integration Tests
@@ -119,7 +119,7 @@ fn dropping_watcher_stops_events() {
 #[tokio::test]
 async fn single_trigger_causes_one_build() {
     let (tx, rx) = mpsc::channel(8);
-    let (reload_tx, _reload_rx) = broadcast::channel::<()>(16);
+    let (reload_tx, _reload_rx) = broadcast::channel::<DevServerMessage>(16);
     let count = std::sync::Arc::new(std::sync::Mutex::new(0u32));
     let c = count.clone();
 
@@ -141,7 +141,7 @@ async fn single_trigger_causes_one_build() {
 #[tokio::test]
 async fn rapid_triggers_collapse_to_at_most_two_builds() {
     let (tx, rx) = mpsc::channel(8);
-    let (reload_tx, _reload_rx) = broadcast::channel::<()>(16);
+    let (reload_tx, _reload_rx) = broadcast::channel::<DevServerMessage>(16);
     let count = std::sync::Arc::new(std::sync::Mutex::new(0u32));
     let c = count.clone();
 
@@ -170,7 +170,7 @@ async fn rapid_triggers_collapse_to_at_most_two_builds() {
 #[tokio::test]
 async fn build_failure_does_not_block_subsequent_builds() {
     let (tx, rx) = mpsc::channel(8);
-    let (reload_tx, _reload_rx) = broadcast::channel::<()>(16);
+    let (reload_tx, _reload_rx) = broadcast::channel::<DevServerMessage>(16);
     let count = std::sync::Arc::new(std::sync::Mutex::new(0u32));
     let first = std::sync::Arc::new(std::sync::Mutex::new(true));
     let c = count.clone();
@@ -208,7 +208,7 @@ async fn build_failure_does_not_block_subsequent_builds() {
 #[tokio::test]
 async fn closed_channel_exits_loop_cleanly() {
     let (tx, rx) = mpsc::channel::<()>(8);
-    let (reload_tx, _reload_rx) = broadcast::channel::<()>(16);
+    let (reload_tx, _reload_rx) = broadcast::channel::<DevServerMessage>(16);
     let count = std::sync::Arc::new(std::sync::Mutex::new(0u32));
     let c = count.clone();
 

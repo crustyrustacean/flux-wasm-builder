@@ -16,7 +16,7 @@ pub mod validation;
 
 // Re-exports for convenience
 pub use build::{
-    BuildConfig, BuildError, BuildMode, DevMode, FileWatcher, run_build_loop,
+    BuildConfig, BuildError, BuildMode, DevMode, DevServerMessage, FileWatcher, run_build_loop,
     run_command_with_timeout, run_wasm_pack, run_wasm_pack_with_env, serve_pkg_file, spa_fallback,
     start_watcher,
 };
