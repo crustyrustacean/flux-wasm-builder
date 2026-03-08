@@ -302,7 +302,14 @@ pub async fn run(open_browser: bool) -> Result<(), DevError> {
         }
     }
 
-    serve(&config, build_config_for_serve, reload_tx, css_bytes, watchers).await?;
+    serve(
+        &config,
+        build_config_for_serve,
+        reload_tx,
+        css_bytes,
+        watchers,
+    )
+    .await?;
 
     Ok(())
 }
