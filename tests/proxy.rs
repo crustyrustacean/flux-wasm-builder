@@ -14,6 +14,7 @@ fn make_config(backend_port: u16) -> FluxConfig {
             backend_port,
             watch_debounce_ms: 300,
         },
+        watch: vec![],
     }
 }
 

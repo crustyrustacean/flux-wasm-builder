@@ -5,3 +5,21 @@ name = "{{ name }}"
 public_port = 8080
 backend_port = 3001
 watch_debounce_ms = 300
+
+# Custom watch paths for additional file monitoring.
+# Uncomment and configure as needed:
+#
+# [[watch]]
+# path = "frontend/content"
+# extensions = ["md", "mdx"]
+# action = "reload"
+#
+# [[watch]]
+# path = "frontend/assets"
+# extensions = []  # Watch all files
+# action = "reload"
+#
+# Available actions:
+# - "reload"  : Trigger browser page reload
+# - "rebuild" : Trigger WASM rebuild
+# - "restart" : Trigger backend restart

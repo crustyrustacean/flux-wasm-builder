@@ -120,6 +120,44 @@ watch_debounce_ms = 300     # file change debounce interval
 
 The backend reads its port from the `FLUX_BACKEND_PORT` environment variable, which `flux-wasm-builder dev` sets automatically from `config.dev.backend_port`.
 
+### Custom Watch Paths
+
+You can add custom watch paths for additional file monitoring using `[[watch]]` entries:
+
+```toml
+# Watch a content folder for markdown files
+[[watch]]
+path = "frontend/content"
+extensions = ["md", "mdx"]
+action = "reload"
+
+# Watch an assets folder (all file types)
+[[watch]]
+path = "frontend/assets"
+extensions = []
+action = "reload"
+
+# Watch shared crate for type changes
+[[watch]]
+path = "shared/src"
+extensions = ["rs"]
+action = "rebuild"
+```
+
+**Available actions:**
+
+| Action | Effect |
+|--------|--------|
+| `reload` | Trigger browser page reload |
+| `rebuild` | Trigger WASM rebuild (then reload) |
+| `restart` | Trigger backend restart |
+
+**Notes:**
+- Paths are relative to the project root
+- Empty `extensions` array watches all files
+- Non-existent paths are logged as warnings and skipped
+- Core watchers (`frontend/src`, `backend/src`, `frontend/public`, `frontend/styles`) are always active
+
 ## Architecture
 
 ```
@@ -132,7 +170,7 @@ Browser :8080
     └── /*                  → index.html (SPA fallback)
 ```
 
-The tool runs four file watchers simultaneously:
+The tool runs four core file watchers simultaneously (always active):
 
 | Watcher | Path | Filters | On change |
 |---------|------|---------|-----------|
@@ -140,6 +178,8 @@ The tool runs four file watchers simultaneously:
 | Backend | `backend/src/` | `.rs` | Kill backend, respawn, health check, then browser reload |
 | Styles | `frontend/styles/` | `.scss` | Recompile SCSS in memory, browser reload |
 | Public assets | `frontend/public/` | any file | Browser reload |
+
+Additional custom watchers can be configured via `[[watch]]` entries in `flux.toml` (see [Custom Watch Paths](#custom-watch-paths)).
 
 ## Generated backend
 

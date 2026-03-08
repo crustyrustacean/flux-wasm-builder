@@ -1,9 +1,11 @@
 // src/dev/mod.rs
 
 // dependencies
-use crate::build::{BuildConfig, run_build_loop, run_wasm_pack, scss::compile_scss, start_watcher};
+use crate::build::{
+    BuildConfig, FileWatcher, run_build_loop, run_wasm_pack, scss::compile_scss, start_watcher,
+};
 use crate::dev::server::serve;
-use crate::domain::{ConfigError, FluxConfig};
+use crate::domain::{ConfigError, FluxConfig, WatchAction};
 use reqwest::Client;
 use std::process::{Child, Command};
 use std::sync::{Arc, RwLock};
@@ -44,30 +46,36 @@ pub async fn run() -> Result<(), DevError> {
     let (reload_tx, _reload_rx) = tokio::sync::broadcast::channel::<()>(16); // ← remove the underscore from _reload_rx
     let (restart_tx, mut restart_rx) = tokio::sync::mpsc::channel::<()>(8);
 
+    // Collect all watcher handles so they don't get dropped
+    let mut watchers: Vec<FileWatcher> = Vec::new();
+
+    // Core watcher: frontend/src → WASM rebuild
     let watch_path = std::env::current_dir()?.join("frontend/src");
-    let _frontend_watcher = start_watcher(
+    watchers.push(start_watcher(
         &watch_path,
         config.dev.watch_debounce_ms,
-        build_tx,
+        build_tx.clone(),
         Some(&["rs"]),
-    )?;
+    )?);
 
+    // Core watcher: backend/src → Backend restart
     let backend_watch_path = std::env::current_dir()?.join("backend/src");
-    let _backend_watcher = start_watcher(
+    watchers.push(start_watcher(
         &backend_watch_path,
         config.dev.watch_debounce_ms,
-        restart_tx,
+        restart_tx.clone(),
         Some(&["rs"]),
-    )?;
+    )?);
 
+    // Core watcher: frontend/public → Page reload
     let (public_tx, mut public_rx) = tokio::sync::mpsc::channel::<()>(8);
     let public_watch_path = std::env::current_dir()?.join("frontend/public");
-    let _public_watcher = start_watcher(
+    watchers.push(start_watcher(
         &public_watch_path,
         config.dev.watch_debounce_ms,
         public_tx,
         None,
-    )?;
+    )?);
 
     let reload_tx_for_public = reload_tx.clone();
     tokio::spawn(async move {
@@ -76,14 +84,15 @@ pub async fn run() -> Result<(), DevError> {
         }
     });
 
+    // Core watcher: frontend/styles → SCSS recompilation
     let (styles_tx, mut styles_rx) = tokio::sync::mpsc::channel::<()>(8);
     let styles_watch_path = std::env::current_dir()?.join("frontend/styles");
-    let _styles_watcher = start_watcher(
+    watchers.push(start_watcher(
         &styles_watch_path,
         config.dev.watch_debounce_ms,
         styles_tx,
         Some(&["scss"]),
-    )?;
+    )?);
 
     let reload_tx_for_styles = reload_tx.clone();
     let css_bytes_for_styles = css_bytes.clone();
@@ -103,6 +112,101 @@ pub async fn run() -> Result<(), DevError> {
             }
         }
     });
+
+    // Custom watchers from configuration
+    // Clone the watch configs to avoid lifetime issues with the loop
+    let custom_watches: Vec<_> = config.watch.clone();
+    for watch_config in custom_watches {
+        let watch_path = std::env::current_dir()?.join(&watch_config.path);
+
+        // Skip if path doesn't exist
+        if !watch_path.exists() {
+            tracing::warn!(
+                path = %watch_path.display(),
+                "watch path does not exist, skipping"
+            );
+            continue;
+        }
+
+        // Determine extensions slice - leak memory for 'static lifetime (acceptable for long-running process)
+        let extensions: Option<&'static [&'static str]> = if watch_config.extensions.is_empty() {
+            None
+        } else {
+            // Leak each string and the slice - acceptable since watchers live for process lifetime
+            let exts: Vec<&'static str> = watch_config
+                .extensions
+                .iter()
+                .map(|s| {
+                    let leaked: &'static str = Box::leak(s.clone().into_boxed_str());
+                    leaked
+                })
+                .collect();
+            let boxed: Box<[&'static str]> = exts.into_boxed_slice();
+            Some(Box::leak(boxed))
+        };
+
+        let debounce_ms = config.dev.watch_debounce_ms;
+
+        // Create channel and spawn handler based on action type
+        match watch_config.action {
+            WatchAction::Reload => {
+                let (tx, mut rx) = tokio::sync::mpsc::channel::<()>(8);
+                let reload = reload_tx.clone();
+                let path_for_log = watch_config.path.display().to_string();
+                let exts_for_log = watch_config.extensions.clone();
+                watchers.push(start_watcher(&watch_path, debounce_ms, tx, extensions)?);
+                tokio::spawn(async move {
+                    while let Some(()) = rx.recv().await {
+                        let _ = reload.send(());
+                    }
+                });
+                tracing::info!(
+                    path = %path_for_log,
+                    extensions = ?exts_for_log,
+                    "custom reload watcher started"
+                );
+            }
+            WatchAction::Rebuild => {
+                let (tx, mut rx) = tokio::sync::mpsc::channel::<()>(8);
+                let reload = reload_tx.clone();
+                let build = build_tx.clone();
+                let path_for_log = watch_config.path.display().to_string();
+                let exts_for_log = watch_config.extensions.clone();
+                watchers.push(start_watcher(&watch_path, debounce_ms, tx, extensions)?);
+                tokio::spawn(async move {
+                    while let Some(()) = rx.recv().await {
+                        let _ = build.send(()).await;
+                        let _ = reload.send(());
+                    }
+                });
+                tracing::info!(
+                    path = %path_for_log,
+                    extensions = ?exts_for_log,
+                    "custom rebuild watcher started"
+                );
+            }
+            WatchAction::Restart => {
+                let (tx, mut rx) = tokio::sync::mpsc::channel::<()>(8);
+                let restart = restart_tx.clone();
+                let path_for_log = watch_config.path.display().to_string();
+                let exts_for_log = watch_config.extensions.clone();
+                watchers.push(start_watcher(&watch_path, debounce_ms, tx, extensions)?);
+                tokio::spawn(async move {
+                    while let Some(()) = rx.recv().await {
+                        let _ = restart.send(()).await;
+                    }
+                });
+                tracing::info!(
+                    path = %path_for_log,
+                    extensions = ?exts_for_log,
+                    "custom restart watcher started"
+                );
+            }
+        }
+    }
+
+    // Store watchers so they don't get dropped (they must live for process lifetime)
+    std::mem::forget(watchers);
 
     let reload_tx_clone = reload_tx.clone();
     let build_config = BuildConfig::new(std::env::current_dir()?.join("frontend"));

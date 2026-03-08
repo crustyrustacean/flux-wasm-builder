@@ -3,5 +3,8 @@
 # docs
 docs/book/
 
+# plans
+plans/
+
 # build artifacts
 /target

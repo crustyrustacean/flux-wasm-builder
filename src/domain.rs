@@ -24,6 +24,9 @@ pub struct FluxConfig {
     pub project: ProjectConfig,
     #[serde(default)]
     pub dev: DevConfig,
+    /// Custom watch paths for additional file monitoring
+    #[serde(default)]
+    pub watch: Vec<WatchConfig>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -46,6 +49,47 @@ impl Default for DevConfig {
             watch_debounce_ms: 300,
         }
     }
+}
+
+/// Configuration for a custom watch path.
+///
+/// Defines a directory to monitor for file changes and what action
+/// to take when changes are detected.
+///
+/// # Example TOML
+///
+/// ```toml
+/// [[watch]]
+/// path = "frontend/content"
+/// extensions = ["md", "mdx"]
+/// action = "reload"
+/// ```
+#[derive(Clone, Debug, Deserialize)]
+pub struct WatchConfig {
+    /// Relative path from project root to watch recursively
+    pub path: PathBuf,
+
+    /// File extensions to filter (e.g., ["md", "mdx"]).
+    /// Empty vector means watch all files.
+    #[serde(default)]
+    pub extensions: Vec<String>,
+
+    /// Action to take when a change is detected
+    pub action: WatchAction,
+}
+
+/// Action to take when a watched file changes.
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum WatchAction {
+    /// Trigger a browser page reload
+    Reload,
+
+    /// Trigger a WASM rebuild
+    Rebuild,
+
+    /// Trigger a backend restart
+    Restart,
 }
 
 impl FluxConfig {
@@ -143,6 +187,147 @@ name = "minimal"
         let dir = tempdir().unwrap();
         let config_path = dir.path().join("flux.toml");
         std::fs::write(&config_path, b"[dev]\npublic_port = 8080").unwrap();
+
+        let result = FluxConfig::from_file(&config_path);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn flux_config_parses_watch_config() {
+        let dir = tempdir().unwrap();
+        let config_path = dir.path().join("flux.toml");
+        let mut file = std::fs::File::create(&config_path).unwrap();
+        writeln!(
+            file,
+            r#"
+[project]
+name = "test-app"
+
+[dev]
+public_port = 8080
+backend_port = 3001
+watch_debounce_ms = 300
+
+[[watch]]
+path = "frontend/content"
+extensions = ["md", "mdx"]
+action = "reload"
+
+[[watch]]
+path = "frontend/assets"
+extensions = []
+action = "reload"
+"#
+        )
+        .unwrap();
+
+        let config = FluxConfig::from_file(&config_path).unwrap();
+        assert_eq!(config.watch.len(), 2);
+
+        // First watch config
+        assert_eq!(
+            config.watch[0].path,
+            std::path::PathBuf::from("frontend/content")
+        );
+        assert_eq!(config.watch[0].extensions, vec!["md", "mdx"]);
+        assert_eq!(config.watch[0].action, WatchAction::Reload);
+
+        // Second watch config
+        assert_eq!(
+            config.watch[1].path,
+            std::path::PathBuf::from("frontend/assets")
+        );
+        assert!(config.watch[1].extensions.is_empty());
+        assert_eq!(config.watch[1].action, WatchAction::Reload);
+    }
+
+    #[test]
+    fn flux_config_watch_defaults_to_empty_vec() {
+        let dir = tempdir().unwrap();
+        let config_path = dir.path().join("flux.toml");
+        let mut file = std::fs::File::create(&config_path).unwrap();
+        writeln!(
+            file,
+            r#"
+[project]
+name = "test-app"
+
+[dev]
+public_port = 8080
+backend_port = 3001
+watch_debounce_ms = 300
+"#
+        )
+        .unwrap();
+
+        let config = FluxConfig::from_file(&config_path).unwrap();
+        assert!(config.watch.is_empty());
+    }
+
+    #[test]
+    fn watch_action_rebuild_parses_correctly() {
+        let dir = tempdir().unwrap();
+        let config_path = dir.path().join("flux.toml");
+        let mut file = std::fs::File::create(&config_path).unwrap();
+        writeln!(
+            file,
+            r#"
+[project]
+name = "test-app"
+
+[[watch]]
+path = "shared/src"
+extensions = ["rs"]
+action = "rebuild"
+"#
+        )
+        .unwrap();
+
+        let config = FluxConfig::from_file(&config_path).unwrap();
+        assert_eq!(config.watch[0].action, WatchAction::Rebuild);
+    }
+
+    #[test]
+    fn watch_action_restart_parses_correctly() {
+        let dir = tempdir().unwrap();
+        let config_path = dir.path().join("flux.toml");
+        let mut file = std::fs::File::create(&config_path).unwrap();
+        writeln!(
+            file,
+            r#"
+[project]
+name = "test-app"
+
+[[watch]]
+path = "backend/config"
+extensions = ["yaml"]
+action = "restart"
+"#
+        )
+        .unwrap();
+
+        let config = FluxConfig::from_file(&config_path).unwrap();
+        assert_eq!(config.watch[0].action, WatchAction::Restart);
+    }
+
+    #[test]
+    fn watch_config_invalid_action_returns_error() {
+        let dir = tempdir().unwrap();
+        let config_path = dir.path().join("flux.toml");
+        let mut file = std::fs::File::create(&config_path).unwrap();
+        writeln!(
+            file,
+            r#"
+[project]
+name = "test-app"
+
+[[watch]]
+path = "frontend/content"
+extensions = ["md"]
+action = "invalid_action"
+"#
+        )
+        .unwrap();
 
         let result = FluxConfig::from_file(&config_path);
         assert!(result.is_err());
