@@ -13,14 +13,13 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
 
-steps:
+    steps:
       - uses: actions/checkout@v4
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache dependencies
-        uses: Cargo cache
         uses: actions/cache@v4
         with:
           path: |
