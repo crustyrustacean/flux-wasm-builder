@@ -55,7 +55,7 @@ fn app() -> Html {
 
     html! {
         <div>
-            <h1>{ "Flux WASM Builder" }</h1>
+            <h1>{ "WASM Drydock" }</h1>
             {
                 if let Some(msg) = (*message).clone() {
                     html! { <p>{ msg }</p> }

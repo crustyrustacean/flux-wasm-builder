@@ -1,4 +1,4 @@
-//! flux-wasm-builder CLI entry point
+//! wasm-drydock CLI entry point
 //!
 //! This binary provides three commands for managing fullstack Rust web applications:
 //!
@@ -8,14 +8,14 @@
 
 // dependencies
 use clap::{Parser, Subcommand};
-use flux_wasm_builder::dev;
-use flux_wasm_builder::init::scaffold;
-use flux_wasm_builder::release;
+use wasm_drydock::dev;
+use wasm_drydock::init::scaffold;
+use wasm_drydock::release;
 use std::path::PathBuf;
 
-/// CLI parser for flux-wasm-builder
+/// CLI parser for wasm-drydock
 #[derive(Parser)]
-#[command(name = "flux-wasm-builder")]
+#[command(name = "wasm-drydock")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,

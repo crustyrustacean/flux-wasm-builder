@@ -1,13 +1,13 @@
-# flux-wasm-builder
+# wasm-drydock
 
 A single-command dev tool for fullstack Rust web applications using **Actix-web** and **Yew**. Scaffolds a three-crate workspace, then stays alive as the persistent driver of your entire development loop.
 
 ## How it works
 
-Most fullstack Rust setups require you to manage two separate processes: one for the frontend WASM build and one for the backend server. `flux-wasm-builder` replaces both with a single command that owns the whole loop:
+Most fullstack Rust setups require you to manage two separate processes: one for the frontend WASM build and one for the backend server. `wasm-drydock` replaces both with a single command that owns the whole loop:
 
 ```
-flux-wasm-builder dev
+wasm-drydock dev
 ```
 
 This starts a dev server on port 8080 that:
@@ -34,8 +34,8 @@ The `init` command validates these before scaffolding.
 ## Installation
 
 ```bash
-git clone https://github.com/your-username/flux-wasm-builder.git
-cd flux-wasm-builder
+git clone https://github.com/your-username/wasm-drydock.git
+cd wasm-drydock
 cargo install --path .
 ```
 
@@ -46,7 +46,7 @@ Reinstall after making changes to the tool.
 ### Create a new project
 
 ```bash
-flux-wasm-builder init my-app
+wasm-drydock init my-app
 cd my-app
 ```
 
@@ -57,7 +57,7 @@ my-app/
 ├── .cargo/config.toml      # cargo alias: backend = "run -p my-app-backend"
 ├── .gitignore
 ├── Cargo.toml              # workspace root
-├── flux.toml               # flux-wasm-builder configuration
+├── drydock.toml            # wasm-drydock configuration
 ├── backend/                # Actix-web API server
 │   ├── Cargo.toml
 │   ├── build.rs
@@ -89,7 +89,7 @@ my-app/
 ### Start the dev server
 
 ```bash
-flux-wasm-builder dev
+wasm-drydock dev
 ```
 
 Open `http://localhost:8080`. Edits to frontend, backend, styles, or public assets are picked up automatically.
@@ -97,15 +97,15 @@ Open `http://localhost:8080`. Edits to frontend, backend, styles, or public asse
 To open the browser automatically when the server starts:
 
 ```bash
-flux-wasm-builder dev --open
+wasm-drydock dev --open
 # or
-flux-wasm-builder dev -o
+wasm-drydock dev -o
 ```
 
 ### Build for release
 
 ```bash
-flux-wasm-builder release
+wasm-drydock release
 ```
 
 This runs `wasm-pack build --release` on the frontend, then `cargo build --release --features embed-assets` on the backend. The result is a single self-contained binary — all frontend assets **and** `configuration/base.yaml` are compiled in, so the binary runs with zero filesystem dependencies.
@@ -114,7 +114,7 @@ Deploy the binary alone. To customise settings without a recompile, place an env
 
 ## Configuration
 
-`flux.toml` lives at the workspace root. All `[dev]` fields are optional and fall back to the defaults shown:
+`drydock.toml` lives at the workspace root. All `[dev]` fields are optional and fall back to the defaults shown:
 
 ```toml
 [project]
@@ -126,7 +126,7 @@ backend_port = 3001         # internal backend port
 watch_debounce_ms = 300     # file change debounce interval
 ```
 
-The backend reads its port from the `FLUX_BACKEND_PORT` environment variable, which `flux-wasm-builder dev` sets automatically from `config.dev.backend_port`.
+The backend reads its port from the `DRYDOCK_BACKEND_PORT` environment variable, which `wasm-drydock dev` sets automatically from `config.dev.backend_port`.
 
 ### Custom Watch Paths
 
@@ -187,13 +187,13 @@ The tool runs four core file watchers simultaneously (always active):
 | Styles | `frontend/styles/` | `.scss` | Recompile SCSS in memory, browser reload |
 | Public assets | `frontend/public/` | any file | Browser reload |
 
-Additional custom watchers can be configured via `[[watch]]` entries in `flux.toml` (see [Custom Watch Paths](#custom-watch-paths)).
+Additional custom watchers can be configured via `[[watch]]` entries in `drydock.toml` (see [Custom Watch Paths](#custom-watch-paths)).
 
 ## Generated backend
 
 The scaffolded backend is an opinionated Actix-web starter. Out of the box `backend/src/` contains:
 
-- **`configuration.rs`** — YAML-based configuration loading via the `config` crate. In development builds, reads `configuration/base.yaml` and an environment-specific file from the filesystem. In release builds (`embed-assets` feature), `base.yaml` is compiled directly into the binary via `include_str!` — no config files required at runtime. An optional environment-specific file (e.g. `configuration/production.yaml`) placed next to the binary is still loaded when present. `APP_*` environment variables override everything. The `FLUX_BACKEND_PORT` env var overrides the configured port at runtime.
+- **`configuration.rs`** — YAML-based configuration loading via the `config` crate. In development builds, reads `configuration/base.yaml` and an environment-specific file from the filesystem. In release builds (`embed-assets` feature), `base.yaml` is compiled directly into the binary via `include_str!` — no config files required at runtime. An optional environment-specific file (e.g. `configuration/production.yaml`) placed next to the binary is still loaded when present. `APP_*` environment variables override everything. The `DRYDOCK_BACKEND_PORT` env var overrides the configured port at runtime.
 - **`startup.rs`** — `Application` struct that wires up the Actix-web server, routes, and middleware.
 - **`error.rs`** — `ApiError` enum implementing Actix-web's `ResponseError` trait, mapping variants (`BadRequest`, `NotFound`, `Internal`) to HTTP status codes.
 - **`response.rs`** — `ApiResponse<T>` generic wrapper implementing the `Responder` trait, with `success()` and `error()` constructors for consistent JSON responses.
@@ -226,7 +226,7 @@ pub struct StatusResponse {
 |------|--------|
 | `embed-assets` | Embeds `frontend/pkg/`, `frontend/index.html`, `frontend/public/`, compiled CSS, **and `configuration/base.yaml`** into the binary at compile time. The resulting binary has zero runtime filesystem dependencies. |
 
-Used automatically by `flux-wasm-builder release`.
+Used automatically by `wasm-drydock release`.
 
 ## Running tests
 
@@ -240,11 +240,10 @@ Tests that invoke `wasm-pack` are gated behind an environment variable:
 RUN_WASM_TESTS=1 cargo test
 ```
 
-## Non-goals
+## Someday goals
 
-- Multi-framework support (Yew only)
+- Multi-framework support (Yew only at the moment, would be nice to add anything `trunk` supports)
 - CSS-in-Rust or Tailwind integration
-- npm or Node.js in the build path
 - Multi-target or SSR builds
 
 ## License

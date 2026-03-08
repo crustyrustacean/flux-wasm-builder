@@ -1,7 +1,7 @@
 // tests/styles.rs
 
 use actix_web::{App, test, web};
-use flux_wasm_builder::dev::styles::styles_handler;
+use wasm_drydock::dev::styles::styles_handler;
 use std::sync::{Arc, RwLock};
 
 #[actix_web::test]

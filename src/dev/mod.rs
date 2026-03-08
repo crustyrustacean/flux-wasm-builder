@@ -1,6 +1,6 @@
 //! Development server module
 //!
-//! This module provides the core development server functionality for flux-wasm-builder.
+//! This module provides the core development server functionality for wasm-drydock.
 //! It orchestrates the entire development loop including:
 //!
 //! - Building the frontend with `wasm-pack`
@@ -12,7 +12,7 @@
 //! # Example
 //!
 //! ```ignore
-//! use flux_wasm_builder::dev;
+//! use wasm_drydock::dev;
 //!
 //! // Start the dev server without opening a browser
 //! dev::run(false).await?;
@@ -26,7 +26,7 @@ use crate::build::{
     BuildConfig, FileWatcher, run_build_loop, run_wasm_pack, scss::compile_scss, start_watcher,
 };
 use crate::dev::server::serve;
-use crate::domain::{ConfigError, FluxConfig, WatchAction};
+use crate::domain::{ConfigError, DrydockConfig, WatchAction};
 use reqwest::Client;
 use std::process::{Child, Command};
 use std::sync::{Arc, RwLock};
@@ -61,7 +61,7 @@ pub enum DevError {
 ///
 /// This function orchestrates the entire development loop:
 ///
-/// 1. Loads configuration from `flux.toml` in the current directory
+/// 1. Loads configuration from `drydock.toml` in the current directory
 /// 2. Compiles initial SCSS from `frontend/styles/`
 /// 3. Spawns the backend process and waits for it to be ready
 /// 4. Sets up file watchers for frontend, backend, styles, and public assets
@@ -93,8 +93,8 @@ pub enum DevError {
 /// dev::run(true).await?;
 /// ```
 pub async fn run(open_browser: bool) -> Result<(), DevError> {
-    let config_path = std::env::current_dir()?.join("flux.toml");
-    let config = FluxConfig::from_file(&config_path)?;
+    let config_path = std::env::current_dir()?.join("drydock.toml");
+    let config = DrydockConfig::from_file(&config_path)?;
 
     let styles_path = std::env::current_dir()?.join("frontend/styles");
     let initial_css = compile_scss(&styles_path).unwrap_or_default();
@@ -315,11 +315,11 @@ struct ProcessManager {
 }
 
 impl ProcessManager {
-    fn new(config: &FluxConfig) -> Result<Self, DevError> {
+    fn new(config: &DrydockConfig) -> Result<Self, DevError> {
         let backend_dir = std::env::current_dir()?.join("backend");
         let child = Command::new("cargo")
             .args(["run", "-p", &format!("{}-backend", config.project.name)])
-            .env("FLUX_BACKEND_PORT", config.dev.backend_port.to_string())
+            .env("DRYDOCK_BACKEND_PORT", config.dev.backend_port.to_string())
             .current_dir(backend_dir)
             .spawn()?;
 
@@ -328,7 +328,7 @@ impl ProcessManager {
         })
     }
 
-    async fn wait_for_ready(config: &FluxConfig) -> Result<(), DevError> {
+    async fn wait_for_ready(config: &DrydockConfig) -> Result<(), DevError> {
         let http_client = Client::new();
         let url = format!(
             "http://localhost:{}/api/health_check",
@@ -354,7 +354,7 @@ impl ProcessManager {
         }
     }
 
-    async fn restart(&mut self, config: &FluxConfig) -> Result<(), DevError> {
+    async fn restart(&mut self, config: &DrydockConfig) -> Result<(), DevError> {
         // Kill and reap the existing process
         if let Some(child) = self.handle.as_mut() {
             child.kill()?;
@@ -365,7 +365,7 @@ impl ProcessManager {
         let backend_dir = std::env::current_dir()?.join("backend");
         let child = Command::new("cargo")
             .args(["run", "-p", &format!("{}-backend", config.project.name)])
-            .env("FLUX_BACKEND_PORT", config.dev.backend_port.to_string())
+            .env("DRYDOCK_BACKEND_PORT", config.dev.backend_port.to_string())
             .current_dir(backend_dir)
             .spawn()?;
 

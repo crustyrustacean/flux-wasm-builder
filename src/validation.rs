@@ -49,7 +49,7 @@ pub enum ValidationError {
 /// # Examples
 ///
 /// ```
-/// use flux_wasm_builder::validation::validate_project_name;
+/// use wasm_drydock::validation::validate_project_name;
 ///
 /// assert!(validate_project_name("my-app").is_ok());
 /// assert!(validate_project_name("my_app").is_ok());

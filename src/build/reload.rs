@@ -57,7 +57,7 @@ pub const RELOAD_SCRIPT: &str = r#"<script>
 /// # Examples
 ///
 /// ```
-/// use flux_wasm_builder::inject_reload_script;
+/// use wasm_drydock::inject_reload_script;
 ///
 /// let html = "<html><body><p>Hello</p></body></html>";
 /// let result = inject_reload_script(html);

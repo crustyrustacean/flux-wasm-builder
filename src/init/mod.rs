@@ -135,8 +135,8 @@ fn write_files(project_root: &Path, name: &str) -> Result<(), InitError> {
             render_template("backend/cargo.toml", &ctx)?,
         ),
         (
-            project_root.join("flux.toml"),
-            render_template("backend/flux.toml", &ctx)?,
+            project_root.join("drydock.toml"),
+            render_template("backend/drydock.toml", &ctx)?,
         ),
         (
             project_root.join("backend/build.rs"),
@@ -254,7 +254,7 @@ fn print_success(name: &str) {
     println!();
     println!("Next steps:");
     println!("  cd {name}");
-    println!("  flux-wasm-builder dev");
+    println!("  wasm-drydock dev");
 }
 
 #[cfg(test)]
@@ -271,7 +271,7 @@ mod tests {
         assert!(root.path().join("my-app/.cargo/config.toml").exists());
         assert!(root.path().join("my-app/.gitignore").exists());
         assert!(root.path().join("my-app/backend/Cargo.toml").exists());
-        assert!(root.path().join("my-app/flux.toml").exists());
+        assert!(root.path().join("my-app/drydock.toml").exists());
         assert!(root.path().join("my-app/backend/build.rs").exists());
         assert!(root.path().join("my-app/backend/src/bin/main.rs").exists());
         assert!(root.path().join("my-app/backend/src/lib.rs").exists());
@@ -556,8 +556,8 @@ mod tests {
             "configuration.rs should have effective_port method"
         );
         assert!(
-            contents.contains("FLUX_BACKEND_PORT"),
-            "configuration.rs should respect FLUX_BACKEND_PORT env var"
+            contents.contains("DRYDOCK_BACKEND_PORT"),
+            "configuration.rs should respect DRYDOCK_BACKEND_PORT env var"
         );
     }
 

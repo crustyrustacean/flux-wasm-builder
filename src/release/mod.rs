@@ -2,7 +2,7 @@
 
 // dependencies
 use crate::build::{BuildConfig, wasm_pack::run_wasm_pack};
-use crate::domain::FluxConfig;
+use crate::domain::DrydockConfig;
 use std::process::Command;
 use thiserror::Error;
 
@@ -21,8 +21,8 @@ pub enum ReleaseError {
 }
 
 pub async fn run() -> Result<(), ReleaseError> {
-    let config_path = std::env::current_dir()?.join("flux.toml");
-    let config = FluxConfig::from_file(&config_path)?;
+    let config_path = std::env::current_dir()?.join("drydock.toml");
+    let config = DrydockConfig::from_file(&config_path)?;
 
     println!("Building frontend...");
     let build_config = BuildConfig::new(std::env::current_dir()?.join("frontend"));

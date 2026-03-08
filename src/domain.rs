@@ -6,13 +6,13 @@ use std::path::PathBuf;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ConfigError {
-    #[error("failed to read flux.toml: {source}")]
+    #[error("failed to read drydock.toml: {source}")]
     ReadFailed {
         #[from]
         source: std::io::Error,
     },
 
-    #[error("failed to parse flux.toml: {source}")]
+    #[error("failed to parse drydock.toml: {source}")]
     ParseFailed {
         #[from]
         source: toml::de::Error,
@@ -20,7 +20,7 @@ pub enum ConfigError {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-pub struct FluxConfig {
+pub struct DrydockConfig {
     pub project: ProjectConfig,
     #[serde(default)]
     pub dev: DevConfig,
@@ -92,12 +92,12 @@ pub enum WatchAction {
     Restart,
 }
 
-impl FluxConfig {
+impl DrydockConfig {
     pub fn from_file(path: &PathBuf) -> Result<Self, ConfigError> {
         let contents = std::fs::read_to_string(path)?;
-        let flux_config: FluxConfig = toml::from_str(&contents)?;
+        let drydock_config: DrydockConfig = toml::from_str(&contents)?;
 
-        Ok(flux_config)
+        Ok(drydock_config)
     }
 }
 
@@ -116,9 +116,9 @@ mod tests {
     }
 
     #[test]
-    fn flux_config_parses_valid_toml() {
+    fn drydock_config_parses_valid_toml() {
         let dir = tempdir().unwrap();
-        let config_path = dir.path().join("flux.toml");
+        let config_path = dir.path().join("drydock.toml");
         let mut file = std::fs::File::create(&config_path).unwrap();
         writeln!(
             file,
@@ -134,15 +134,15 @@ watch_debounce_ms = 300
         )
         .unwrap();
 
-        let config = FluxConfig::from_file(&config_path).unwrap();
+        let config = DrydockConfig::from_file(&config_path).unwrap();
         assert_eq!(config.project.name, "test-app");
         assert_eq!(config.dev.public_port, 8080);
     }
 
     #[test]
-    fn flux_config_uses_dev_defaults() {
+    fn drydock_config_uses_dev_defaults() {
         let dir = tempdir().unwrap();
-        let config_path = dir.path().join("flux.toml");
+        let config_path = dir.path().join("drydock.toml");
         let mut file = std::fs::File::create(&config_path).unwrap();
         writeln!(
             file,
@@ -153,14 +153,14 @@ name = "minimal"
         )
         .unwrap();
 
-        let config = FluxConfig::from_file(&config_path).unwrap();
+        let config = DrydockConfig::from_file(&config_path).unwrap();
         assert_eq!(config.dev.public_port, 8080); // default
         assert_eq!(config.dev.backend_port, 3001); // default
     }
 
     #[test]
-    fn flux_config_missing_file_returns_error() {
-        let result = FluxConfig::from_file(&PathBuf::from("/nonexistent/flux.toml"));
+    fn drydock_config_missing_file_returns_error() {
+        let result = DrydockConfig::from_file(&PathBuf::from("/nonexistent/drydock.toml"));
         assert!(result.is_err());
         assert!(matches!(
             result.unwrap_err(),
@@ -169,12 +169,12 @@ name = "minimal"
     }
 
     #[test]
-    fn flux_config_invalid_toml_returns_error() {
+    fn drydock_config_invalid_toml_returns_error() {
         let dir = tempdir().unwrap();
-        let config_path = dir.path().join("flux.toml");
+        let config_path = dir.path().join("drydock.toml");
         std::fs::write(&config_path, b"invalid [[toml").unwrap();
 
-        let result = FluxConfig::from_file(&config_path);
+        let result = DrydockConfig::from_file(&config_path);
         assert!(result.is_err());
         assert!(matches!(
             result.unwrap_err(),
@@ -183,19 +183,19 @@ name = "minimal"
     }
 
     #[test]
-    fn flux_config_missing_project_name_returns_error() {
+    fn drydock_config_missing_project_name_returns_error() {
         let dir = tempdir().unwrap();
-        let config_path = dir.path().join("flux.toml");
+        let config_path = dir.path().join("drydock.toml");
         std::fs::write(&config_path, b"[dev]\npublic_port = 8080").unwrap();
 
-        let result = FluxConfig::from_file(&config_path);
+        let result = DrydockConfig::from_file(&config_path);
         assert!(result.is_err());
     }
 
     #[test]
-    fn flux_config_parses_watch_config() {
+    fn drydock_config_parses_watch_config() {
         let dir = tempdir().unwrap();
-        let config_path = dir.path().join("flux.toml");
+        let config_path = dir.path().join("drydock.toml");
         let mut file = std::fs::File::create(&config_path).unwrap();
         writeln!(
             file,
@@ -221,7 +221,7 @@ action = "reload"
         )
         .unwrap();
 
-        let config = FluxConfig::from_file(&config_path).unwrap();
+        let config = DrydockConfig::from_file(&config_path).unwrap();
         assert_eq!(config.watch.len(), 2);
 
         // First watch config
@@ -242,9 +242,9 @@ action = "reload"
     }
 
     #[test]
-    fn flux_config_watch_defaults_to_empty_vec() {
+    fn drydock_config_watch_defaults_to_empty_vec() {
         let dir = tempdir().unwrap();
-        let config_path = dir.path().join("flux.toml");
+        let config_path = dir.path().join("drydock.toml");
         let mut file = std::fs::File::create(&config_path).unwrap();
         writeln!(
             file,
@@ -260,14 +260,14 @@ watch_debounce_ms = 300
         )
         .unwrap();
 
-        let config = FluxConfig::from_file(&config_path).unwrap();
+        let config = DrydockConfig::from_file(&config_path).unwrap();
         assert!(config.watch.is_empty());
     }
 
     #[test]
     fn watch_action_rebuild_parses_correctly() {
         let dir = tempdir().unwrap();
-        let config_path = dir.path().join("flux.toml");
+        let config_path = dir.path().join("drydock.toml");
         let mut file = std::fs::File::create(&config_path).unwrap();
         writeln!(
             file,
@@ -283,14 +283,14 @@ action = "rebuild"
         )
         .unwrap();
 
-        let config = FluxConfig::from_file(&config_path).unwrap();
+        let config = DrydockConfig::from_file(&config_path).unwrap();
         assert_eq!(config.watch[0].action, WatchAction::Rebuild);
     }
 
     #[test]
     fn watch_action_restart_parses_correctly() {
         let dir = tempdir().unwrap();
-        let config_path = dir.path().join("flux.toml");
+        let config_path = dir.path().join("drydock.toml");
         let mut file = std::fs::File::create(&config_path).unwrap();
         writeln!(
             file,
@@ -306,14 +306,14 @@ action = "restart"
         )
         .unwrap();
 
-        let config = FluxConfig::from_file(&config_path).unwrap();
+        let config = DrydockConfig::from_file(&config_path).unwrap();
         assert_eq!(config.watch[0].action, WatchAction::Restart);
     }
 
     #[test]
     fn watch_config_invalid_action_returns_error() {
         let dir = tempdir().unwrap();
-        let config_path = dir.path().join("flux.toml");
+        let config_path = dir.path().join("drydock.toml");
         let mut file = std::fs::File::create(&config_path).unwrap();
         writeln!(
             file,
@@ -329,7 +329,7 @@ action = "invalid_action"
         )
         .unwrap();
 
-        let result = FluxConfig::from_file(&config_path);
+        let result = DrydockConfig::from_file(&config_path);
         assert!(result.is_err());
     }
 }

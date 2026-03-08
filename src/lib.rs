@@ -1,5 +1,10 @@
 // src/lib.rs
 
+//! wasm-drydock - A single-command dev tool for fullstack Rust web applications.
+//!
+//! This crate provides the core functionality for scaffolding and developing
+//! fullstack Rust applications using Actix-web and Yew.
+
 // module declarations
 pub mod build;
 pub mod dev;

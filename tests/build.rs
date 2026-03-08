@@ -20,7 +20,7 @@ fn wasm_pack_builds_scaffolded_frontend() {
     let dir = tempdir().unwrap();
 
     // Scaffold the project
-    cargo_bin_cmd!("flux-wasm-builder")
+    cargo_bin_cmd!("wasm-drydock")
         .args(["init", "test-app"])
         .current_dir(dir.path())
         .assert()

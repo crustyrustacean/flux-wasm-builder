@@ -6,7 +6,7 @@ fn main() {
             panic!(
                 "\n\nembedding assets requires frontend/pkg/ to exist and be non-empty.\n\
                  Run this first:\n\n  \
-                 flux-wasm-builder release\n\n"
+                 wasm-drydock release\n\n"
             );
         }
 
@@ -15,7 +15,7 @@ fn main() {
             panic!(
                 "\n\nembedding assets requires frontend/styles/screen.css to exist.\n\
                  Run this first:\n\n  \
-                 flux-wasm-builder release\n\n"
+                 wasm-drydock release\n\n"
             );
         }
 

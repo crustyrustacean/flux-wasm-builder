@@ -18,7 +18,7 @@ async fn health_check() -> impl Responder {
 
 async fn hello() -> impl Responder {
     HttpResponse::Ok().json(HelloResponse {
-        message: "Hello from Flux!".to_string(),
+        message: "Hello from Drydock!".to_string(),
     })
 }
 

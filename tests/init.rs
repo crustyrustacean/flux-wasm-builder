@@ -5,7 +5,7 @@ use tempfile::tempdir;
 #[test]
 fn init_creates_project_in_current_directory() {
     let dir = tempdir().unwrap();
-    cargo_bin_cmd!("flux-wasm-builder")
+    cargo_bin_cmd!("wasm-drydock")
         .args(["init", "test-project"])
         .current_dir(dir.path())
         .assert()
@@ -19,7 +19,7 @@ fn init_creates_project_in_current_directory() {
 #[test]
 fn init_prints_success_message_with_project_name() {
     let dir = tempdir().unwrap();
-    cargo_bin_cmd!("flux-wasm-builder")
+    cargo_bin_cmd!("wasm-drydock")
         .args(["init", "test-project"])
         .current_dir(dir.path())
         .assert()
@@ -28,21 +28,21 @@ fn init_prints_success_message_with_project_name() {
 }
 
 #[test]
-fn init_prints_flux_wasm_builder_dev_next_step() {
+fn init_prints_wasm_drydock_dev_next_step() {
     let dir = tempdir().unwrap();
-    cargo_bin_cmd!("flux-wasm-builder")
+    cargo_bin_cmd!("wasm-drydock")
         .args(["init", "test-project"])
         .current_dir(dir.path())
         .assert()
         .success()
-        .stdout(contains("flux-wasm-builder dev"));
+        .stdout(contains("wasm-drydock dev"));
 }
 
 #[test]
 fn init_fails_clearly_if_directory_exists() {
     let dir = tempdir().unwrap();
     std::fs::create_dir(dir.path().join("test-project")).unwrap();
-    cargo_bin_cmd!("flux-wasm-builder")
+    cargo_bin_cmd!("wasm-drydock")
         .args(["init", "test-project"])
         .current_dir(dir.path())
         .assert()
@@ -52,7 +52,7 @@ fn init_fails_clearly_if_directory_exists() {
 
 #[test]
 fn init_requires_name_argument() {
-    cargo_bin_cmd!("flux-wasm-builder")
+    cargo_bin_cmd!("wasm-drydock")
         .args(["init"])
         .assert()
         .failure();
@@ -61,7 +61,7 @@ fn init_requires_name_argument() {
 #[test]
 fn init_creates_styles_directory_and_screen_scss() {
     let dir = tempdir().unwrap();
-    cargo_bin_cmd!("flux-wasm-builder")
+    cargo_bin_cmd!("wasm-drydock")
         .args(["init", "test-app"])
         .current_dir(dir.path())
         .assert()
@@ -78,7 +78,7 @@ fn init_creates_styles_directory_and_screen_scss() {
 #[test]
 fn init_creates_static_assets_rs() {
     let dir = tempdir().unwrap();
-    cargo_bin_cmd!("flux-wasm-builder")
+    cargo_bin_cmd!("wasm-drydock")
         .args(["init", "test-app"])
         .current_dir(dir.path())
         .assert()
@@ -94,7 +94,7 @@ fn init_creates_static_assets_rs() {
 #[test]
 fn init_screen_scss_is_non_empty() {
     let dir = tempdir().unwrap();
-    cargo_bin_cmd!("flux-wasm-builder")
+    cargo_bin_cmd!("wasm-drydock")
         .args(["init", "test-app"])
         .current_dir(dir.path())
         .assert()
@@ -112,7 +112,7 @@ fn init_screen_scss_is_non_empty() {
 #[test]
 fn init_static_assets_rs_has_embed_assets_cfg_gate() {
     let dir = tempdir().unwrap();
-    cargo_bin_cmd!("flux-wasm-builder")
+    cargo_bin_cmd!("wasm-drydock")
         .args(["init", "test-app"])
         .current_dir(dir.path())
         .assert()
@@ -141,7 +141,7 @@ fn init_static_assets_rs_has_embed_assets_cfg_gate() {
 #[test]
 fn init_index_html_links_screen_css() {
     let dir = tempdir().unwrap();
-    cargo_bin_cmd!("flux-wasm-builder")
+    cargo_bin_cmd!("wasm-drydock")
         .args(["init", "test-app"])
         .current_dir(dir.path())
         .assert()
@@ -158,7 +158,7 @@ fn init_index_html_links_screen_css() {
 #[test]
 fn init_gitignore_excludes_compiled_css() {
     let dir = tempdir().unwrap();
-    cargo_bin_cmd!("flux-wasm-builder")
+    cargo_bin_cmd!("wasm-drydock")
         .args(["init", "test-app"])
         .current_dir(dir.path())
         .assert()
@@ -174,7 +174,7 @@ fn init_gitignore_excludes_compiled_css() {
 #[test]
 fn init_creates_public_directory() {
     let dir = tempdir().unwrap();
-    cargo_bin_cmd!("flux-wasm-builder")
+    cargo_bin_cmd!("wasm-drydock")
         .args(["init", "test-app"])
         .current_dir(dir.path())
         .assert()
@@ -186,7 +186,7 @@ fn init_creates_public_directory() {
 #[test]
 fn init_public_directory_contains_gitkeep() {
     let dir = tempdir().unwrap();
-    cargo_bin_cmd!("flux-wasm-builder")
+    cargo_bin_cmd!("wasm-drydock")
         .args(["init", "test-app"])
         .current_dir(dir.path())
         .assert()
@@ -202,9 +202,9 @@ fn init_public_directory_contains_gitkeep() {
 #[test]
 fn dev_command_exists() {
     let dir = tempdir().unwrap();
-    cargo_bin_cmd!("flux-wasm-builder")
+    cargo_bin_cmd!("wasm-drydock")
         .args(["dev"])
         .current_dir(dir.path())
         .assert()
-        .failure(); // Fails because no flux.toml exists
+        .failure(); // Fails because no drydock.toml exists
 }

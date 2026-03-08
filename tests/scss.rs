@@ -1,6 +1,6 @@
 // tests/scss.rs
 
-use flux_wasm_builder::build::scss::{ScssError, compile_scss};
+use wasm_drydock::build::scss::{ScssError, compile_scss};
 use tempfile::tempdir;
 
 #[test]

@@ -5,7 +5,7 @@
 
 use std::time::Duration;
 
-use flux_wasm_builder::{BuildError, run_build_loop, start_watcher};
+use wasm_drydock::{BuildError, run_build_loop, start_watcher};
 use tempfile::tempdir;
 use tokio::sync::{broadcast, mpsc};
 

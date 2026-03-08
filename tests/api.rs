@@ -4,7 +4,7 @@ use tempfile::tempdir;
 #[test]
 fn scaffolded_api_mod_imports_status_response() {
     let dir = tempdir().unwrap();
-    cargo_bin_cmd!("flux-wasm-builder")
+    cargo_bin_cmd!("wasm-drydock")
         .args(["init", "test-app"])
         .current_dir(dir.path())
         .assert()
@@ -31,7 +31,7 @@ fn scaffolded_api_mod_imports_status_response() {
 #[test]
 fn scaffolded_api_status_uses_shared_type() {
     let dir = tempdir().unwrap();
-    cargo_bin_cmd!("flux-wasm-builder")
+    cargo_bin_cmd!("wasm-drydock")
         .args(["init", "test-app"])
         .current_dir(dir.path())
         .assert()
@@ -57,7 +57,7 @@ fn scaffolded_api_status_uses_shared_type() {
 #[test]
 fn scaffolded_shared_lib_has_compile_time_assertions() {
     let dir = tempdir().unwrap();
-    cargo_bin_cmd!("flux-wasm-builder")
+    cargo_bin_cmd!("wasm-drydock")
         .args(["init", "test-app"])
         .current_dir(dir.path())
         .assert()
@@ -83,7 +83,7 @@ fn scaffolded_shared_lib_has_compile_time_assertions() {
 #[test]
 fn scaffolded_shared_lib_has_round_trip_tests() {
     let dir = tempdir().unwrap();
-    cargo_bin_cmd!("flux-wasm-builder")
+    cargo_bin_cmd!("wasm-drydock")
         .args(["init", "test-app"])
         .current_dir(dir.path())
         .assert()
@@ -109,7 +109,7 @@ fn scaffolded_shared_lib_has_round_trip_tests() {
 #[test]
 fn scaffolded_shared_cargo_toml_has_serde_json_dev_dependency() {
     let dir = tempdir().unwrap();
-    cargo_bin_cmd!("flux-wasm-builder")
+    cargo_bin_cmd!("wasm-drydock")
         .args(["init", "test-app"])
         .current_dir(dir.path())
         .assert()
@@ -131,7 +131,7 @@ fn scaffolded_shared_cargo_toml_has_serde_json_dev_dependency() {
 #[test]
 fn scaffolded_frontend_fetches_api_status() {
     let dir = tempdir().unwrap();
-    cargo_bin_cmd!("flux-wasm-builder")
+    cargo_bin_cmd!("wasm-drydock")
         .args(["init", "test-app"])
         .current_dir(dir.path())
         .assert()
@@ -153,7 +153,7 @@ fn scaffolded_frontend_fetches_api_status() {
 #[test]
 fn scaffolded_api_responses_use_json_content_type() {
     let dir = tempdir().unwrap();
-    cargo_bin_cmd!("flux-wasm-builder")
+    cargo_bin_cmd!("wasm-drydock")
         .args(["init", "test-app"])
         .current_dir(dir.path())
         .assert()

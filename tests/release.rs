@@ -5,9 +5,9 @@ use predicates::str::contains;
 use tempfile::tempdir;
 
 #[test]
-fn release_command_fails_without_flux_toml() {
+fn release_command_fails_without_drydock_toml() {
     let dir = tempdir().unwrap();
-    cargo_bin_cmd!("flux-wasm-builder")
+    cargo_bin_cmd!("wasm-drydock")
         .args(["release"])
         .current_dir(dir.path())
         .assert()
@@ -16,7 +16,7 @@ fn release_command_fails_without_flux_toml() {
 
 #[test]
 fn release_command_exists_in_help() {
-    cargo_bin_cmd!("flux-wasm-builder")
+    cargo_bin_cmd!("wasm-drydock")
         .args(["--help"])
         .assert()
         .success()

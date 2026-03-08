@@ -84,8 +84,8 @@ static TERA: LazyLock<Tera> = LazyLock::new(|| {
             include_str!("templates/backend/cargo.toml"),
         ),
         (
-            "backend/flux.toml",
-            include_str!("templates/backend/flux.toml"),
+            "backend/drydock.toml",
+            include_str!("templates/backend/drydock.toml"),
         ),
         (
             "backend/build.rs",

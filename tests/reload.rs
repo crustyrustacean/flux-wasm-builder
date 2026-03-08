@@ -4,7 +4,7 @@
 // Run with: cargo test --test reload
 
 use actix_web::{App, test as actix_test, web};
-use flux_wasm_builder::{
+use wasm_drydock::{
     BuildConfig, DevMode, RELOAD_SCRIPT, inject_reload_script, spa_fallback, ws_reload_handler,
 };
 use tempfile::tempdir;

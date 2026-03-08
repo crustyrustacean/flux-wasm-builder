@@ -805,35 +805,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "flux-wasm-builder"
-version = "0.20.0"
-dependencies = [
- "actix-rt",
- "actix-web",
- "actix-ws",
- "assert_cmd",
- "clap",
- "futures-util",
- "grass",
- "include_dir",
- "mime_guess",
- "notify-debouncer-mini",
- "predicates",
- "reqwest",
- "serde",
- "serde_json",
- "tempfile",
- "tera",
- "thiserror 2.0.18",
- "tokio",
- "tokio-test",
- "toml",
- "tracing",
- "tracing-subscriber",
- "webbrowser",
-]
-
-[[package]]
 name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3191,6 +3162,35 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "75a326b8c223ee17883a4251907455a2431acc2791c98c26279376490c378c16"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "wasm-drydock"
+version = "0.21.0"
+dependencies = [
+ "actix-rt",
+ "actix-web",
+ "actix-ws",
+ "assert_cmd",
+ "clap",
+ "futures-util",
+ "grass",
+ "include_dir",
+ "mime_guess",
+ "notify-debouncer-mini",
+ "predicates",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tera",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-test",
+ "toml",
+ "tracing",
+ "tracing-subscriber",
+ "webbrowser",
 ]
 
 [[package]]

@@ -6,14 +6,14 @@ use crate::build::{BuildConfig, serve_pkg_file, spa_fallback, ws_reload_handler}
 use crate::dev::DevError;
 use crate::dev::proxy::proxy_handler;
 use crate::dev::styles::styles_handler;
-use crate::domain::FluxConfig;
+use crate::domain::DrydockConfig;
 use actix_web::web::{self, Data};
 use actix_web::{App, HttpServer};
 use std::sync::{Arc, RwLock};
 use tokio::sync::broadcast;
 
 pub async fn serve(
-    config: &FluxConfig,
+    config: &DrydockConfig,
     build_config: BuildConfig,
     reload_tx: broadcast::Sender<()>,
     css_bytes: Arc<RwLock<Vec<u8>>>,

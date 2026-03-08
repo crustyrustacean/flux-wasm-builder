@@ -18,9 +18,9 @@ pub struct ApplicationSettings {
 }
 
 impl ApplicationSettings {
-    /// Returns the port, respecting FLUX_BACKEND_PORT override from the tool.
+    /// Returns the port, respecting DRYDOCK_BACKEND_PORT override from the tool.
     pub fn effective_port(&self) -> u16 {
-        std::env::var("FLUX_BACKEND_PORT")
+        std::env::var("DRYDOCK_BACKEND_PORT")
             .ok()
             .and_then(|s| s.parse().ok())
             .unwrap_or(self.port)
@@ -163,9 +163,9 @@ mod tests {
     }
 
     #[test]
-    fn effective_port_uses_flux_backend_port_env_var() {
+    fn effective_port_uses_drydock_backend_port_env_var() {
         unsafe {
-            std::env::set_var("FLUX_BACKEND_PORT", "9999");
+            std::env::set_var("DRYDOCK_BACKEND_PORT", "9999");
         }
         let settings = ApplicationSettings {
             port: 3001,
@@ -174,14 +174,14 @@ mod tests {
         };
         assert_eq!(settings.effective_port(), 9999);
         unsafe {
-            std::env::remove_var("FLUX_BACKEND_PORT");
+            std::env::remove_var("DRYDOCK_BACKEND_PORT");
         }
     }
 
     #[test]
     fn effective_port_falls_back_to_config_port() {
         unsafe {
-            std::env::remove_var("FLUX_BACKEND_PORT");
+            std::env::remove_var("DRYDOCK_BACKEND_PORT");
         }
         let settings = ApplicationSettings {
             port: 3001,
@@ -194,7 +194,7 @@ mod tests {
     #[test]
     fn effective_port_ignores_invalid_env_var() {
         unsafe {
-            std::env::set_var("FLUX_BACKEND_PORT", "not-a-number");
+            std::env::set_var("DRYDOCK_BACKEND_PORT", "not-a-number");
         }
         let settings = ApplicationSettings {
             port: 3001,
@@ -203,7 +203,7 @@ mod tests {
         };
         assert_eq!(settings.effective_port(), 3001);
         unsafe {
-            std::env::remove_var("FLUX_BACKEND_PORT");
+            std::env::remove_var("DRYDOCK_BACKEND_PORT");
         }
     }
 }

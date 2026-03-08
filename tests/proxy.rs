@@ -1,11 +1,11 @@
 // tests/proxy.rs
 
 use actix_web::{App, HttpResponse, test, web};
-use flux_wasm_builder::dev::proxy::proxy_handler;
-use flux_wasm_builder::domain::{DevConfig, FluxConfig, ProjectConfig};
+use wasm_drydock::dev::proxy::proxy_handler;
+use wasm_drydock::domain::{DevConfig, DrydockConfig, ProjectConfig};
 
-fn make_config(backend_port: u16) -> FluxConfig {
-    FluxConfig {
+fn make_config(backend_port: u16) -> DrydockConfig {
+    DrydockConfig {
         project: ProjectConfig {
             name: "test".to_string(),
         },
