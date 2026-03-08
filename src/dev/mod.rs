@@ -28,8 +28,8 @@ use crate::build::{
 use crate::dev::server::serve;
 use crate::domain::{ConfigError, DrydockConfig, WatchAction};
 use reqwest::Client;
-use std::process::{Child, Command};
 use std::sync::{Arc, RwLock};
+use tokio::process::{Child, Command};
 use tokio::time::Duration;
 
 // module declarations
@@ -321,6 +321,7 @@ impl ProcessManager {
             .args(["run", "-p", &format!("{}-backend", config.project.name)])
             .env("DRYDOCK_BACKEND_PORT", config.dev.backend_port.to_string())
             .current_dir(backend_dir)
+            .kill_on_drop(true) // ← add this line in both places
             .spawn()?;
 
         Ok(Self {
@@ -356,9 +357,9 @@ impl ProcessManager {
 
     async fn restart(&mut self, config: &DrydockConfig) -> Result<(), DevError> {
         // Kill and reap the existing process
-        if let Some(child) = self.handle.as_mut() {
-            child.kill()?;
-            child.wait()?;
+        if let Some(mut child) = self.handle.take() {
+            child.kill().await?;
+            child.wait().await?;
         }
 
         // Respawn
