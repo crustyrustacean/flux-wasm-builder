@@ -94,6 +94,14 @@ flux-wasm-builder dev
 
 Open `http://localhost:8080`. Edits to frontend, backend, styles, or public assets are picked up automatically.
 
+To open the browser automatically when the server starts:
+
+```bash
+flux-wasm-builder dev --open
+# or
+flux-wasm-builder dev -o
+```
+
 ### Build for release
 
 ```bash

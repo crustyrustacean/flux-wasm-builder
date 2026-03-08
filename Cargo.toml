@@ -26,6 +26,7 @@ toml = "1.0.3"
 thiserror = "2.0.18"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+webbrowser = "0.8"
 
 [dependencies.include_dir]
 version = "0.7"

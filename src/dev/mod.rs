@@ -1,4 +1,25 @@
-// src/dev/mod.rs
+//! Development server module
+//!
+//! This module provides the core development server functionality for flux-wasm-builder.
+//! It orchestrates the entire development loop including:
+//!
+//! - Building the frontend with `wasm-pack`
+//! - Spawning and managing the backend process
+//! - File watching for hot-reloading
+//! - SCSS compilation
+//! - WebSocket-based browser reload signaling
+//!
+//! # Example
+//!
+//! ```ignore
+//! use flux_wasm_builder::dev;
+//!
+//! // Start the dev server without opening a browser
+//! dev::run(false).await?;
+//!
+//! // Start the dev server and open browser automatically
+//! dev::run(true).await?;
+//! ```
 
 // dependencies
 use crate::build::{
@@ -16,22 +37,62 @@ pub mod proxy;
 pub mod server;
 pub mod styles;
 
+/// Errors that can occur during development server operation
 #[derive(Debug, thiserror::Error)]
 pub enum DevError {
+    /// Configuration file could not be read or parsed
     #[error("configuration error: {0}")]
     Config(#[from] ConfigError),
 
+    /// I/O error (file system, process spawning, etc.)
     #[error("io error: {0}")]
     Io(#[from] std::io::Error),
 
+    /// Backend process did not respond to health checks within timeout
     #[error("backend did not become ready in time")]
     BackendNotReady,
 
+    /// File watcher encountered an error
     #[error("file watcher error: {0}")]
     WatcherError(#[from] notify_debouncer_mini::notify::Error),
 }
 
-pub async fn run() -> Result<(), DevError> {
+/// Start the development server
+///
+/// This function orchestrates the entire development loop:
+///
+/// 1. Loads configuration from `flux.toml` in the current directory
+/// 2. Compiles initial SCSS from `frontend/styles/`
+/// 3. Spawns the backend process and waits for it to be ready
+/// 4. Sets up file watchers for frontend, backend, styles, and public assets
+/// 5. Performs initial WASM build with `wasm-pack`
+/// 6. Optionally opens a browser window
+/// 7. Starts the HTTP server with proxy, WebSocket, and static file handling
+///
+/// # Arguments
+///
+/// * `open_browser` - If `true`, opens the default browser at the dev server URL
+///   (`http://127.0.0.1:{public_port}`) after the server is ready. Browser opening
+///   failures are logged as warnings and do not block server startup.
+///
+/// # Errors
+///
+/// Returns `DevError` if:
+/// - Configuration cannot be loaded
+/// - Backend process cannot be spawned or doesn't become ready
+/// - File watchers cannot be initialized
+/// - The HTTP server fails to bind or encounters a fatal error
+///
+/// # Example
+///
+/// ```ignore
+/// // Start dev server without opening browser
+/// dev::run(false).await?;
+///
+/// // Start dev server and open browser automatically
+/// dev::run(true).await?;
+/// ```
+pub async fn run(open_browser: bool) -> Result<(), DevError> {
     let config_path = std::env::current_dir()?.join("flux.toml");
     let config = FluxConfig::from_file(&config_path)?;
 
@@ -234,6 +295,15 @@ pub async fn run() -> Result<(), DevError> {
             }
         }
     });
+
+    // Open browser if requested
+    if open_browser {
+        let url = format!("http://127.0.0.1:{}", config.dev.public_port);
+        match webbrowser::open(&url) {
+            Ok(_) => tracing::info!("Opening browser at {}", url),
+            Err(e) => tracing::warn!("Failed to open browser: {}", e),
+        }
+    }
 
     serve(&config, build_config_for_serve, reload_tx, css_bytes).await?;
 
