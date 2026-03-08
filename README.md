@@ -1,5 +1,9 @@
 # wasm-drydock
 
+[![Documentation](https://img.shields.io/badge/docs-online-blue)](https://crustyrustacean.github.io/wasm-drydock)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE.txt)
+[![Security Audit](https://github.com/crustyrustacean/wasm-drydock/actions/workflows/security.yml/badge.svg)](https://github.com/crustyrustacean/wasm-drydock/actions/workflows/security.yml)
+
 A single-command dev tool for fullstack Rust web applications using **Actix-web** and **Yew**. Scaffolds a three-crate workspace, then stays alive as the persistent driver of your entire development loop.
 
 ## How it works
