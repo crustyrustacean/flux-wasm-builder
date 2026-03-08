@@ -1,8 +1,8 @@
 // tests/styles.rs
 
 use actix_web::{App, test, web};
-use wasm_drydock::dev::styles::styles_handler;
 use std::sync::{Arc, RwLock};
+use wasm_drydock::dev::styles::styles_handler;
 
 #[actix_web::test]
 async fn styles_handler_returns_200_with_css_content_type() {

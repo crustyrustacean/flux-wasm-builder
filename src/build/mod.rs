@@ -35,7 +35,8 @@ mod reload;
 pub use build_coordinator::run_build_loop;
 pub use static_assets::{serve_pkg_file, spa_fallback};
 pub use wasm_pack::{
-    BuildConfig, BuildError, run_command_with_timeout, run_wasm_pack, run_wasm_pack_with_env,
+    BuildConfig, BuildError, BuildMode, run_command_with_timeout, run_wasm_pack,
+    run_wasm_pack_with_env,
 };
 pub use watcher::{FileWatcher, start_watcher};
 

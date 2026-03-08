@@ -16,8 +16,9 @@ pub mod validation;
 
 // Re-exports for convenience
 pub use build::{
-    BuildConfig, BuildError, DevMode, FileWatcher, run_build_loop, run_command_with_timeout,
-    run_wasm_pack, run_wasm_pack_with_env, serve_pkg_file, spa_fallback, start_watcher,
+    BuildConfig, BuildError, BuildMode, DevMode, FileWatcher, run_build_loop,
+    run_command_with_timeout, run_wasm_pack, run_wasm_pack_with_env, serve_pkg_file, spa_fallback,
+    start_watcher,
 };
 
 // Only export reload functionality in dev mode (not embed-assets)

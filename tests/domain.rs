@@ -3,8 +3,8 @@
 // Integration tests for domain configuration.
 // Run with: cargo test --test domain
 
-use wasm_drydock::domain::DrydockConfig;
 use tempfile::tempdir;
+use wasm_drydock::domain::DrydockConfig;
 
 #[test]
 fn drydock_config_parses_complete_config() {

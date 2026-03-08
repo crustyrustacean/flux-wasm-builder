@@ -1,7 +1,7 @@
 // src/release/mod.rs
 
 // dependencies
-use crate::build::{BuildConfig, wasm_pack::run_wasm_pack};
+use crate::build::{BuildConfig, BuildMode, wasm_pack::run_wasm_pack};
 use crate::domain::DrydockConfig;
 use std::process::Command;
 use thiserror::Error;
@@ -25,7 +25,10 @@ pub async fn run() -> Result<(), ReleaseError> {
     let config = DrydockConfig::from_file(&config_path)?;
 
     println!("Building frontend...");
-    let build_config = BuildConfig::new(std::env::current_dir()?.join("frontend"));
+    let build_config = BuildConfig {
+        build_mode: BuildMode::Release,
+        ..BuildConfig::new(std::env::current_dir()?.join("frontend"))
+    };
     run_wasm_pack(&build_config)
         .await
         .map_err(|_| ReleaseError::WasmPackFailed)?;

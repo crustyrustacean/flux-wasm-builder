@@ -32,6 +32,12 @@ pub enum BuildError {
     KillFailed { source: std::io::Error },
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum BuildMode {
+    Dev,
+    Release,
+}
+
 /// Configuration for the build subsystem.
 #[derive(Clone, Debug)]
 pub struct BuildConfig {
@@ -51,6 +57,7 @@ pub struct BuildConfig {
     pub port: u16,
     /// Build timeout in seconds (default: 300)
     pub build_timeout_secs: u64,
+    pub build_mode: BuildMode,
 }
 
 impl BuildConfig {
@@ -66,6 +73,7 @@ impl BuildConfig {
             reload_ws_path: "/ws/reload".to_string(),
             port: 8080,
             build_timeout_secs: 300,
+            build_mode: BuildMode::Dev,
             frontend_crate_path,
         }
     }
@@ -99,11 +107,10 @@ pub async fn run_wasm_pack_with_env(
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit());
 
-    // Apply dev mode flag (in release builds, use --release)
-    #[cfg(debug_assertions)]
-    cmd.arg("--dev");
-    #[cfg(not(debug_assertions))]
-    cmd.arg("--release");
+    match config.build_mode {
+        BuildMode::Dev => cmd.arg("--dev"),
+        BuildMode::Release => cmd.arg("--release"),
+    };
 
     for (k, v) in extra_env {
         cmd.env(k, v);

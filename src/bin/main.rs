@@ -8,10 +8,10 @@
 
 // dependencies
 use clap::{Parser, Subcommand};
+use std::path::PathBuf;
 use wasm_drydock::dev;
 use wasm_drydock::init::scaffold;
 use wasm_drydock::release;
-use std::path::PathBuf;
 
 /// CLI parser for wasm-drydock
 #[derive(Parser)]

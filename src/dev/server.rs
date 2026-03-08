@@ -36,7 +36,7 @@ pub async fn serve(
             .service(web::scope("/api").default_service(web::to(proxy_handler)))
             .service(web::resource("/pkg/{filename}").route(web::get().to(serve_pkg_file)))
             .route("/ws/reload", web::get().to(ws_reload_handler))
-            .route("styles/screen.css", web::get().to(styles_handler))
+            .route("/styles/screen.css", web::get().to(styles_handler))
             .default_service(web::to(spa_fallback))
     })
     .bind(("127.0.0.1", config.dev.public_port))?

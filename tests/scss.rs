@@ -1,7 +1,7 @@
 // tests/scss.rs
 
-use wasm_drydock::build::scss::{ScssError, compile_scss};
 use tempfile::tempdir;
+use wasm_drydock::build::scss::{ScssError, compile_scss};
 
 #[test]
 fn compile_scss_with_variables() {
