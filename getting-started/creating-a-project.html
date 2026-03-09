@@ -185,17 +185,25 @@
 cd my-app
 </code></pre>
 <p><code>wasm-drydock init</code> validates your environment before scaffolding — it checks that <code>wasm-pack</code> is installed, meets the minimum version requirement, and that the <code>wasm32-unknown-unknown</code> target is present. If any check fails, it reports the problem and exits cleanly.</p>
-<p>The generated project is a three-crate Cargo workspace:</p>
+<p>The generated project is a three-crate Cargo workspace with deployment files for Fly.io:</p>
 <pre><code>my-app/
 ├── .cargo/config.toml
+├── .dockerignore
 ├── .gitignore
 ├── Cargo.toml
+├── Dockerfile
 ├── drydock.toml
+├── fly.toml
 ├── backend/
 ├── frontend/
 └── shared/
 </code></pre>
 <p>See <a href="../project-structure/README.html">Project Structure</a> for a detailed walkthrough of what each crate contains and why.</p>
+<h2 id="skip-deployment-files"><a class="header" href="#skip-deployment-files">Skip deployment files</a></h2>
+<p>If you don't need Fly.io deployment configuration, use the <code>--no-deploy</code> flag:</p>
+<pre><code class="language-bash">wasm-drydock init my-app --no-deploy
+</code></pre>
+<p>This skips generating <code>Dockerfile</code>, <code>.dockerignore</code>, and <code>fly.toml</code>.</p>
 <h2 id="project-name-rules"><a class="header" href="#project-name-rules">Project name rules</a></h2>
 <p>Project names follow Cargo conventions:</p>
 <ul>

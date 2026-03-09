@@ -207,6 +207,33 @@ target = "wasm32-unknown-unknown"
 <li><code>frontend/pkg/</code> — wasm-pack build output</li>
 <li><code>frontend/styles/screen.css</code> — compiled SCSS (only written by <code>wasm-drydock release</code>)</li>
 </ul>
+<h2 id="deployment-files"><a class="header" href="#deployment-files">Deployment Files</a></h2>
+<p>By default, <code>wasm-drydock init</code> generates deployment files for Fly.io:</p>
+<h3 id="dockerfile"><a class="header" href="#dockerfile"><code>Dockerfile</code></a></h3>
+<p>A multi-stage Docker build using cargo-chef for layer caching. Builds the frontend with <code>wasm-pack</code>, compiles SCSS, and produces a minimal production image with the backend binary.</p>
+<h3 id="dockerignore"><a class="header" href="#dockerignore"><code>.dockerignore</code></a></h3>
+<p>Excludes unnecessary files from Docker build context:</p>
+<ul>
+<li><code>target/</code> — Cargo build output</li>
+<li><code>frontend/pkg/</code> — wasm-pack output</li>
+<li><code>frontend/styles/screen.css</code> — compiled CSS</li>
+<li><code>.git/</code> — version control</li>
+<li><code>*.md</code> — documentation</li>
+<li><code>fly.toml</code> — Fly.io config (not needed in image)</li>
+</ul>
+<h3 id="flytoml"><a class="header" href="#flytoml"><code>fly.toml</code></a></h3>
+<p>Fly.io deployment configuration with sensible defaults:</p>
+<ul>
+<li>Internal port 3001</li>
+<li>HTTPS forced</li>
+<li>Auto-scaling (stop/start machines)</li>
+<li><code>shared-cpu-1x</code> with 256MB memory</li>
+</ul>
+<p>See <a href="../building-and-deployment/fly-io.html">Fly.io deployment</a> for details.</p>
+<h3 id="skipping-deployment-files"><a class="header" href="#skipping-deployment-files">Skipping deployment files</a></h3>
+<p>Use <code>--no-deploy</code> to skip these files:</p>
+<pre><code class="language-bash">wasm-drydock init my-app --no-deploy
+</code></pre>
 
                     </main>
 

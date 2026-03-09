@@ -180,17 +180,24 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="flyio"><a class="header" href="#flyio">Fly.io</a></h1>
+<p>A <code>fly.toml</code> configuration file is included in every project scaffolded by <code>wasm-drydock init</code>. This provides zero-configuration deployment to Fly.io.</p>
 <h2 id="prerequisites"><a class="header" href="#prerequisites">Prerequisites</a></h2>
 <ul>
 <li><a href="https://fly.io/docs/hands-on/install-flyctl/">flyctl</a> installed and authenticated</li>
 </ul>
-<h2 id="setup"><a class="header" href="#setup">Setup</a></h2>
-<p>Register the app with Fly without deploying:</p>
-<pre><code class="language-bash">fly launch --no-deploy
+<h2 id="quick-deploy"><a class="header" href="#quick-deploy">Quick Deploy</a></h2>
+<p>The scaffolded project includes everything needed for deployment:</p>
+<pre><code class="language-bash"># Register the app with Fly (one-time setup)
+fly launch --no-deploy
+
+# Deploy
+fly deploy
 </code></pre>
-<h2 id="flytoml"><a class="header" href="#flytoml"><code>fly.toml</code></a></h2>
-<pre><code class="language-toml">app = "your-app-name"
-primary_region = "yyz"
+<p>The Docker build runs on your local machine. The resulting image is pushed to Fly's registry and deployed.</p>
+<h2 id="generated-flytoml"><a class="header" href="#generated-flytoml">Generated <code>fly.toml</code></a></h2>
+<p>The scaffolded <code>fly.toml</code> is pre-configured:</p>
+<pre><code class="language-toml">app = "your-app-name"    # Uses your project name
+primary_region = "yyz"   # Toronto (change as needed)
 
 [build]
 
@@ -209,14 +216,31 @@ primary_region = "yyz"
   size = "shared-cpu-1x"
   memory = "256mb"
 </code></pre>
-<h2 id="deploying"><a class="header" href="#deploying">Deploying</a></h2>
-<pre><code class="language-bash">fly deploy
+<h2 id="customization"><a class="header" href="#customization">Customization</a></h2>
+<h3 id="change-the-primary-region"><a class="header" href="#change-the-primary-region">Change the primary region</a></h3>
+<p>Edit <code>fly.toml</code> and change <code>primary_region</code> to your preferred region. Common options:</p>
+<ul>
+<li><code>yyz</code> — Toronto</li>
+<li><code>sea</code> — Seattle</li>
+<li><code>lax</code> — Los Angeles</li>
+<li><code>fra</code> — Frankfurt</li>
+<li><code>sin</code> — Singapore</li>
+</ul>
+<p>See all regions with <code>fly regions list</code>.</p>
+<h3 id="scale-the-vm"><a class="header" href="#scale-the-vm">Scale the VM</a></h3>
+<p>Edit the <code>[[vm]]</code> section in <code>fly.toml</code>:</p>
+<pre><code class="language-toml">[[vm]]
+  size = "shared-cpu-2x"  # Larger CPU
+  memory = "512mb"        # More memory
 </code></pre>
-<p>The Docker build runs on your local machine. The resulting image is pushed to Fly's registry and deployed.</p>
 <h2 id="custom-domain"><a class="header" href="#custom-domain">Custom domain</a></h2>
 <p>Add your domain in the Fly dashboard under <strong>Certificates</strong>, then point your DNS at Fly's servers. Fly provisions the TLS certificate automatically.</p>
 <h2 id="important-bind-address"><a class="header" href="#important-bind-address">Important: bind address</a></h2>
 <p>Fly's proxy routes external traffic to your app's internal port. Your app must bind to <code>0.0.0.0</code> rather than <code>127.0.0.1</code>. The <code>APP_APPLICATION__HOST = "0.0.0.0"</code> environment variable in <code>fly.toml</code> handles this.</p>
+<h2 id="skipping-deployment-files"><a class="header" href="#skipping-deployment-files">Skipping deployment files</a></h2>
+<p>If you don't need Fly.io deployment, use the <code>--no-deploy</code> flag when creating your project:</p>
+<pre><code class="language-bash">wasm-drydock init my-app --no-deploy
+</code></pre>
 
                     </main>
 

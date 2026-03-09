@@ -240,17 +240,25 @@
 cd my-app
 </code></pre>
 <p><code>wasm-drydock init</code> validates your environment before scaffolding — it checks that <code>wasm-pack</code> is installed, meets the minimum version requirement, and that the <code>wasm32-unknown-unknown</code> target is present. If any check fails, it reports the problem and exits cleanly.</p>
-<p>The generated project is a three-crate Cargo workspace:</p>
+<p>The generated project is a three-crate Cargo workspace with deployment files for Fly.io:</p>
 <pre><code>my-app/
 ├── .cargo/config.toml
+├── .dockerignore
 ├── .gitignore
 ├── Cargo.toml
+├── Dockerfile
 ├── drydock.toml
+├── fly.toml
 ├── backend/
 ├── frontend/
 └── shared/
 </code></pre>
 <p>See <a href="getting-started/../project-structure/README.html">Project Structure</a> for a detailed walkthrough of what each crate contains and why.</p>
+<h2 id="skip-deployment-files"><a class="header" href="#skip-deployment-files">Skip deployment files</a></h2>
+<p>If you don't need Fly.io deployment configuration, use the <code>--no-deploy</code> flag:</p>
+<pre><code class="language-bash">wasm-drydock init my-app --no-deploy
+</code></pre>
+<p>This skips generating <code>Dockerfile</code>, <code>.dockerignore</code>, and <code>fly.toml</code>.</p>
 <h2 id="project-name-rules"><a class="header" href="#project-name-rules">Project name rules</a></h2>
 <p>Project names follow Cargo conventions:</p>
 <ul>
@@ -352,6 +360,33 @@ target = "wasm32-unknown-unknown"
 <li><code>frontend/pkg/</code> — wasm-pack build output</li>
 <li><code>frontend/styles/screen.css</code> — compiled SCSS (only written by <code>wasm-drydock release</code>)</li>
 </ul>
+<h2 id="deployment-files"><a class="header" href="#deployment-files">Deployment Files</a></h2>
+<p>By default, <code>wasm-drydock init</code> generates deployment files for Fly.io:</p>
+<h3 id="dockerfile"><a class="header" href="#dockerfile"><code>Dockerfile</code></a></h3>
+<p>A multi-stage Docker build using cargo-chef for layer caching. Builds the frontend with <code>wasm-pack</code>, compiles SCSS, and produces a minimal production image with the backend binary.</p>
+<h3 id="dockerignore"><a class="header" href="#dockerignore"><code>.dockerignore</code></a></h3>
+<p>Excludes unnecessary files from Docker build context:</p>
+<ul>
+<li><code>target/</code> — Cargo build output</li>
+<li><code>frontend/pkg/</code> — wasm-pack output</li>
+<li><code>frontend/styles/screen.css</code> — compiled CSS</li>
+<li><code>.git/</code> — version control</li>
+<li><code>*.md</code> — documentation</li>
+<li><code>fly.toml</code> — Fly.io config (not needed in image)</li>
+</ul>
+<h3 id="flytoml"><a class="header" href="#flytoml"><code>fly.toml</code></a></h3>
+<p>Fly.io deployment configuration with sensible defaults:</p>
+<ul>
+<li>Internal port 3001</li>
+<li>HTTPS forced</li>
+<li>Auto-scaling (stop/start machines)</li>
+<li><code>shared-cpu-1x</code> with 256MB memory</li>
+</ul>
+<p>See <a href="project-structure/../building-and-deployment/fly-io.html">Fly.io deployment</a> for details.</p>
+<h3 id="skipping-deployment-files"><a class="header" href="#skipping-deployment-files">Skipping deployment files</a></h3>
+<p>Use <code>--no-deploy</code> to skip these files:</p>
+<pre><code class="language-bash">wasm-drydock init my-app --no-deploy
+</code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="backend"><a class="header" href="#backend">Backend</a></h1>
 <p>The scaffolded backend is an opinionated Actix-web starter. It is structured around a small set of focused modules:</p>
 <ul>
@@ -575,7 +610,7 @@ configuration/
 <pre><code class="language-bash">APP_APPLICATION__HOST=0.0.0.0 ./my-app-backend
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="docker"><a class="header" href="#docker">Docker</a></h1>
-<p>A <code>Dockerfile</code> is included in every project scaffolded by <code>wasm-drydock init</code>. It uses a multi-stage build to produce a minimal production image.</p>
+<p>A <code>Dockerfile</code> and <code>.dockerignore</code> are included in every project scaffolded by <code>wasm-drydock init</code>. The Dockerfile uses a multi-stage build to produce a minimal production image.</p>
 <h2 id="build-stages"><a class="header" href="#build-stages">Build stages</a></h2>
 <p><strong><code>chef</code></strong> — base image with all build tools installed:</p>
 <ul>
@@ -601,18 +636,29 @@ configuration/
   -e APP_APPLICATION__HOST=0.0.0.0 \
   my-app
 </code></pre>
+<h2 id="skipping-deployment-files-1"><a class="header" href="#skipping-deployment-files-1">Skipping deployment files</a></h2>
+<p>If you don't need deployment files, use the <code>--no-deploy</code> flag:</p>
+<pre><code class="language-bash">wasm-drydock init my-app --no-deploy
+</code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="flyio"><a class="header" href="#flyio">Fly.io</a></h1>
+<p>A <code>fly.toml</code> configuration file is included in every project scaffolded by <code>wasm-drydock init</code>. This provides zero-configuration deployment to Fly.io.</p>
 <h2 id="prerequisites-2"><a class="header" href="#prerequisites-2">Prerequisites</a></h2>
 <ul>
 <li><a href="https://fly.io/docs/hands-on/install-flyctl/">flyctl</a> installed and authenticated</li>
 </ul>
-<h2 id="setup"><a class="header" href="#setup">Setup</a></h2>
-<p>Register the app with Fly without deploying:</p>
-<pre><code class="language-bash">fly launch --no-deploy
+<h2 id="quick-deploy"><a class="header" href="#quick-deploy">Quick Deploy</a></h2>
+<p>The scaffolded project includes everything needed for deployment:</p>
+<pre><code class="language-bash"># Register the app with Fly (one-time setup)
+fly launch --no-deploy
+
+# Deploy
+fly deploy
 </code></pre>
-<h2 id="flytoml"><a class="header" href="#flytoml"><code>fly.toml</code></a></h2>
-<pre><code class="language-toml">app = "your-app-name"
-primary_region = "yyz"
+<p>The Docker build runs on your local machine. The resulting image is pushed to Fly's registry and deployed.</p>
+<h2 id="generated-flytoml"><a class="header" href="#generated-flytoml">Generated <code>fly.toml</code></a></h2>
+<p>The scaffolded <code>fly.toml</code> is pre-configured:</p>
+<pre><code class="language-toml">app = "your-app-name"    # Uses your project name
+primary_region = "yyz"   # Toronto (change as needed)
 
 [build]
 
@@ -631,14 +677,31 @@ primary_region = "yyz"
   size = "shared-cpu-1x"
   memory = "256mb"
 </code></pre>
-<h2 id="deploying"><a class="header" href="#deploying">Deploying</a></h2>
-<pre><code class="language-bash">fly deploy
+<h2 id="customization"><a class="header" href="#customization">Customization</a></h2>
+<h3 id="change-the-primary-region"><a class="header" href="#change-the-primary-region">Change the primary region</a></h3>
+<p>Edit <code>fly.toml</code> and change <code>primary_region</code> to your preferred region. Common options:</p>
+<ul>
+<li><code>yyz</code> — Toronto</li>
+<li><code>sea</code> — Seattle</li>
+<li><code>lax</code> — Los Angeles</li>
+<li><code>fra</code> — Frankfurt</li>
+<li><code>sin</code> — Singapore</li>
+</ul>
+<p>See all regions with <code>fly regions list</code>.</p>
+<h3 id="scale-the-vm"><a class="header" href="#scale-the-vm">Scale the VM</a></h3>
+<p>Edit the <code>[[vm]]</code> section in <code>fly.toml</code>:</p>
+<pre><code class="language-toml">[[vm]]
+  size = "shared-cpu-2x"  # Larger CPU
+  memory = "512mb"        # More memory
 </code></pre>
-<p>The Docker build runs on your local machine. The resulting image is pushed to Fly's registry and deployed.</p>
 <h2 id="custom-domain"><a class="header" href="#custom-domain">Custom domain</a></h2>
 <p>Add your domain in the Fly dashboard under <strong>Certificates</strong>, then point your DNS at Fly's servers. Fly provisions the TLS certificate automatically.</p>
 <h2 id="important-bind-address"><a class="header" href="#important-bind-address">Important: bind address</a></h2>
 <p>Fly's proxy routes external traffic to your app's internal port. Your app must bind to <code>0.0.0.0</code> rather than <code>127.0.0.1</code>. The <code>APP_APPLICATION__HOST = "0.0.0.0"</code> environment variable in <code>fly.toml</code> handles this.</p>
+<h2 id="skipping-deployment-files-2"><a class="header" href="#skipping-deployment-files-2">Skipping deployment files</a></h2>
+<p>If you don't need Fly.io deployment, use the <code>--no-deploy</code> flag when creating your project:</p>
+<pre><code class="language-bash">wasm-drydock init my-app --no-deploy
+</code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="architecture"><a class="header" href="#architecture">Architecture</a></h1>
 <p>This section covers the internal design of the wasm-drydock dev server.</p>
 <ul>
