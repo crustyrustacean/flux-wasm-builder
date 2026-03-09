@@ -2,7 +2,7 @@
 
 // dependencies
 use serde::Deserialize;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, thiserror::Error)]
 pub enum ConfigError {
@@ -93,7 +93,7 @@ pub enum WatchAction {
 }
 
 impl DrydockConfig {
-    pub fn from_file(path: &PathBuf) -> Result<Self, ConfigError> {
+    pub fn from_file(path: &Path) -> Result<Self, ConfigError> {
         let contents = std::fs::read_to_string(path)?;
         let drydock_config: DrydockConfig = toml::from_str(&contents)?;
 

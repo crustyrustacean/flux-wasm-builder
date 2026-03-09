@@ -9,8 +9,8 @@
 use std::future::Future;
 use tokio::sync::{broadcast, mpsc::Receiver};
 
-use super::wasm_pack::BuildError;
 use super::DevServerMessage;
+use super::wasm_pack::BuildError;
 
 /// Run the build loop, serializing rebuild requests.
 ///

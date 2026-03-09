@@ -3,7 +3,7 @@
 // dependencies
 use crate::build::{BuildConfig, BuildMode, wasm_pack::run_wasm_pack};
 use crate::domain::DrydockConfig;
-use std::process::Command;
+use tokio::process::Command;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -49,7 +49,8 @@ pub async fn run() -> Result<(), ReleaseError> {
             "-p",
             &format!("{}-backend", config.project.name),
         ])
-        .status()?;
+        .status()
+        .await?;
 
     if !status.success() {
         return Err(ReleaseError::CargoFailed);

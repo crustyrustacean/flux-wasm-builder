@@ -118,7 +118,7 @@ pub async fn run(open_browser: bool) -> Result<(), DevError> {
     ProcessManager::wait_for_ready(&config).await?;
 
     let (build_tx, build_rx) = tokio::sync::mpsc::channel::<()>(8);
-    let (reload_tx, _reload_rx) = tokio::sync::broadcast::channel::<DevServerMessage>(16);
+    let (reload_tx, _) = tokio::sync::broadcast::channel::<DevServerMessage>(16);
     let (restart_tx, mut restart_rx) = tokio::sync::mpsc::channel::<()>(8);
 
     // Collect all watcher handles so they don't get dropped
