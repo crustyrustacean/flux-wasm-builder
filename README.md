@@ -1,7 +1,7 @@
 # wasm-drydock
 
 [![Documentation](https://img.shields.io/badge/docs-online-blue)](https://crustyrustacean.github.io/wasm-drydock)
-[![CI](https://github.com/crustyrustacean/wasm-drydock/actions/workflows/ci.yml/badge.svg)](https://github.com/crustyrustacean/wasm-drydock/actions/workflows/ci.yml)
+[![CI](https://github.com/crustyrustacean/wasm-drydock/actions/workflows/ci.yml/badge.svg)](https://github.com/crustyrustacean/wasm-drydock/actions/workflows/general.yml)
 [![Security Audit](https://github.com/crustyrustacean/wasm-drydock/actions/workflows/security.yml/badge.svg)](https://github.com/crustyrustacean/wasm-drydock/actions/workflows/security.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE.txt)
 [![Crates.io](https://img.shields.io/crates/v/wasm-drydock)](https://crates.io/crates/wasm-drydock)
