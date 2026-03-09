@@ -30,12 +30,18 @@ enum Commands {
     /// - `backend/` - Actix-web API server
     /// - `frontend/` - Yew WASM application
     /// - `shared/` - Serde-compatible API types
+    ///
+    /// By default, also generates deployment files (Dockerfile, .dockerignore, fly.toml)
+    /// for Fly.io deployment.
     Init {
         /// Project name (will be used as directory name)
         name: String,
         /// Parent directory (defaults to current directory)
         #[arg(short, long, default_value = ".")]
         path: PathBuf,
+        /// Skip deployment file generation (Dockerfile, .dockerignore, fly.toml)
+        #[arg(long)]
+        no_deploy: bool,
     },
 
     /// Launch the development server to build the project
@@ -66,8 +72,8 @@ enum Commands {
 
 async fn run(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
     match cli.command {
-        Commands::Init { name, path } => {
-            scaffold(&path, &name)?;
+        Commands::Init { name, path, no_deploy } => {
+            scaffold(&path, &name, !no_deploy)?;
         }
 
         Commands::Dev { open } => {

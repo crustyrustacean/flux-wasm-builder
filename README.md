@@ -57,14 +57,17 @@ wasm-drydock init my-app
 cd my-app
 ```
 
-This creates a three-crate Cargo workspace:
+This creates a three-crate Cargo workspace with deployment files for Fly.io:
 
 ```
 my-app/
 ├── .cargo/config.toml      # cargo alias: backend = "run -p my-app-backend"
+├── .dockerignore           # Docker build exclusions
 ├── .gitignore
 ├── Cargo.toml              # workspace root
+├── Dockerfile              # Multi-stage build with cargo-chef
 ├── drydock.toml            # wasm-drydock configuration
+├── fly.toml                # Fly.io deployment configuration
 ├── backend/                # Actix-web API server
 │   ├── Cargo.toml
 │   ├── build.rs
@@ -91,6 +94,12 @@ my-app/
 └── shared/                 # Serde-compatible API types
     ├── Cargo.toml
     └── src/
+```
+
+To skip deployment file generation:
+
+```bash
+wasm-drydock init my-app --no-deploy
 ```
 
 ### Start the dev server

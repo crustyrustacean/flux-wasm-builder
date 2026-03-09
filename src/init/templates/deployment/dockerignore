@@ -1,0 +1,9 @@
+target/
+frontend/pkg/
+frontend/styles/screen.css
+.git/
+.gitignore
+*.md
+.env
+.env.*
+fly.toml

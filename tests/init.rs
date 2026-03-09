@@ -208,3 +208,110 @@ fn dev_command_exists() {
         .assert()
         .failure(); // Fails because no drydock.toml exists
 }
+
+#[test]
+fn init_creates_dockerfile_by_default() {
+    let dir = tempdir().unwrap();
+    cargo_bin_cmd!("wasm-drydock")
+        .args(["init", "test-app"])
+        .current_dir(dir.path())
+        .assert()
+        .success();
+
+    assert!(dir.path().join("test-app/Dockerfile").exists());
+}
+
+#[test]
+fn init_creates_dockerignore_by_default() {
+    let dir = tempdir().unwrap();
+    cargo_bin_cmd!("wasm-drydock")
+        .args(["init", "test-app"])
+        .current_dir(dir.path())
+        .assert()
+        .success();
+
+    assert!(dir.path().join("test-app/.dockerignore").exists());
+}
+
+#[test]
+fn init_creates_fly_toml_by_default() {
+    let dir = tempdir().unwrap();
+    cargo_bin_cmd!("wasm-drydock")
+        .args(["init", "test-app"])
+        .current_dir(dir.path())
+        .assert()
+        .success();
+
+    assert!(dir.path().join("test-app/fly.toml").exists());
+}
+
+#[test]
+fn init_no_deploy_skips_deployment_files() {
+    let dir = tempdir().unwrap();
+    cargo_bin_cmd!("wasm-drydock")
+        .args(["init", "test-app", "--no-deploy"])
+        .current_dir(dir.path())
+        .assert()
+        .success();
+
+    assert!(!dir.path().join("test-app/Dockerfile").exists());
+    assert!(!dir.path().join("test-app/.dockerignore").exists());
+    assert!(!dir.path().join("test-app/fly.toml").exists());
+}
+
+#[test]
+fn init_dockerfile_uses_multi_stage_build() {
+    let dir = tempdir().unwrap();
+    cargo_bin_cmd!("wasm-drydock")
+        .args(["init", "test-app"])
+        .current_dir(dir.path())
+        .assert()
+        .success();
+
+    let dockerfile =
+        std::fs::read_to_string(dir.path().join("test-app/Dockerfile")).unwrap();
+    assert!(dockerfile.contains("FROM chef AS planner"));
+    assert!(dockerfile.contains("FROM chef AS builder"));
+    assert!(dockerfile.contains("FROM debian:bookworm-slim AS runtime"));
+}
+
+#[test]
+fn init_fly_toml_contains_app_name() {
+    let dir = tempdir().unwrap();
+    cargo_bin_cmd!("wasm-drydock")
+        .args(["init", "my-awesome-app"])
+        .current_dir(dir.path())
+        .assert()
+        .success();
+
+    let fly_toml =
+        std::fs::read_to_string(dir.path().join("my-awesome-app/fly.toml")).unwrap();
+    assert!(fly_toml.contains("my-awesome-app"));
+}
+
+#[test]
+fn init_prints_deploy_instructions() {
+    let dir = tempdir().unwrap();
+    cargo_bin_cmd!("wasm-drydock")
+        .args(["init", "test-app"])
+        .current_dir(dir.path())
+        .assert()
+        .success()
+        .stdout(contains("fly launch"))
+        .stdout(contains("fly deploy"));
+}
+
+#[test]
+fn init_no_deploy_does_not_print_deploy_instructions() {
+    let dir = tempdir().unwrap();
+    let output = cargo_bin_cmd!("wasm-drydock")
+        .args(["init", "test-app", "--no-deploy"])
+        .current_dir(dir.path())
+        .assert()
+        .success();
+
+    // The output should not contain fly deploy instructions
+    let output_str = String::from_utf8_lossy(&output.get_output().stdout);
+    assert!(!output_str.contains("fly launch"));
+    assert!(!output_str.contains("fly deploy"));
+}

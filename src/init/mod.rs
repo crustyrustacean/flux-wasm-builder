@@ -43,6 +43,12 @@ pub enum InitError {
 /// Creates a three-crate Cargo workspace with backend, frontend, and shared crates.
 /// The project is created in `root/name/`.
 ///
+/// # Arguments
+///
+/// * `root` - Parent directory where the project will be created
+/// * `name` - Project name (used as directory name and in generated files)
+/// * `include_deploy` - If true, generates Dockerfile, .dockerignore, and fly.toml
+///
 /// # Errors
 ///
 /// Returns `InitError` if:
@@ -50,7 +56,7 @@ pub enum InitError {
 /// - Environment checks fail (wasm-pack not found, wrong version, missing target)
 /// - The target directory already exists
 /// - Directory or file creation fails
-pub fn scaffold(root: &Path, name: &str) -> Result<(), InitError> {
+pub fn scaffold(root: &Path, name: &str, include_deploy: bool) -> Result<(), InitError> {
     let span = tracing::info_span!("scaffold", project = name);
     let _enter = span.enter();
 
@@ -81,8 +87,14 @@ pub fn scaffold(root: &Path, name: &str) -> Result<(), InitError> {
     tracing::debug!("writing project files");
     write_files(&project_root, name)?;
 
-    // Step 5: Success output
-    print_success(name);
+    // Step 5: Write deployment files
+    if include_deploy {
+        tracing::debug!("writing deployment files");
+        write_deploy_files(&project_root, name)?;
+    }
+
+    // Step 6: Success output
+    print_success(name, include_deploy);
     tracing::info!("project created successfully");
     Ok(())
 }
@@ -241,13 +253,50 @@ fn write_files(project_root: &Path, name: &str) -> Result<(), InitError> {
     Ok(())
 }
 
-fn print_success(name: &str) {
+fn write_deploy_files(project_root: &Path, name: &str) -> Result<(), InitError> {
+    use templates::{ProjectContext, render_template};
+
+    let ctx = ProjectContext::new(name);
+
+    let files: Vec<(std::path::PathBuf, String)> = vec![
+        (
+            project_root.join("Dockerfile"),
+            render_template("deployment/Dockerfile", &ctx)?,
+        ),
+        (
+            project_root.join(".dockerignore"),
+            render_template("deployment/dockerignore", &ctx)?,
+        ),
+        (
+            project_root.join("fly.toml"),
+            render_template("deployment/fly.toml", &ctx)?,
+        ),
+    ];
+
+    for (path, content) in &files {
+        std::fs::write(path, content).map_err(|e| InitError::WriteFile {
+            path: path.clone(),
+            source: e,
+        })?;
+    }
+
+    Ok(())
+}
+
+fn print_success(name: &str, include_deploy: bool) {
     println!("✓ Created project: {name}/");
     println!();
     println!("  {name}/");
     println!("  ├── .cargo/config.toml");
     println!("  ├── .gitignore");
+    if include_deploy {
+        println!("  ├── .dockerignore");
+        println!("  ├── Dockerfile");
+    }
     println!("  ├── Cargo.toml");
+    if include_deploy {
+        println!("  ├── fly.toml");
+    }
     println!("  ├── backend/");
     println!("  ├── frontend/");
     println!("  └── shared/");
@@ -255,6 +304,12 @@ fn print_success(name: &str) {
     println!("Next steps:");
     println!("  cd {name}");
     println!("  wasm-drydock dev");
+    if include_deploy {
+        println!();
+        println!("Deploy to Fly.io:");
+        println!("  fly launch --no-deploy");
+        println!("  fly deploy");
+    }
 }
 
 #[cfg(test)]
@@ -265,7 +320,7 @@ mod tests {
     #[test]
     fn creates_expected_directory_structure() {
         let root = tempdir().unwrap();
-        scaffold(root.path(), "my-app").unwrap();
+        scaffold(root.path(), "my-app", true).unwrap();
 
         assert!(root.path().join("my-app/Cargo.toml").exists());
         assert!(root.path().join("my-app/.cargo/config.toml").exists());
@@ -290,7 +345,7 @@ mod tests {
     #[test]
     fn workspace_cargo_toml_lists_all_members_with_resolver_3() {
         let root = tempdir().unwrap();
-        scaffold(root.path(), "my-app").unwrap();
+        scaffold(root.path(), "my-app", true).unwrap();
         let contents = std::fs::read_to_string(root.path().join("my-app/Cargo.toml")).unwrap();
         assert!(contents.contains("backend"));
         assert!(contents.contains("frontend"));
@@ -302,7 +357,7 @@ mod tests {
     #[test]
     fn cargo_config_contains_run_alias_for_backend() {
         let root = tempdir().unwrap();
-        scaffold(root.path(), "my-app").unwrap();
+        scaffold(root.path(), "my-app", true).unwrap();
         let contents =
             std::fs::read_to_string(root.path().join("my-app/.cargo/config.toml")).unwrap();
         assert!(contents.contains("[alias]"));
@@ -312,7 +367,7 @@ mod tests {
     #[test]
     fn gitignore_excludes_target_and_pkg() {
         let root = tempdir().unwrap();
-        scaffold(root.path(), "my-app").unwrap();
+        scaffold(root.path(), "my-app", true).unwrap();
         let contents = std::fs::read_to_string(root.path().join("my-app/.gitignore")).unwrap();
         assert!(contents.contains("target/"));
         assert!(contents.contains("frontend/pkg/"));
@@ -322,7 +377,7 @@ mod tests {
     #[test]
     fn frontend_cargo_toml_sets_cdylib_and_pins_yew_022() {
         let root = tempdir().unwrap();
-        scaffold(root.path(), "my-app").unwrap();
+        scaffold(root.path(), "my-app", true).unwrap();
         let contents =
             std::fs::read_to_string(root.path().join("my-app/frontend/Cargo.toml")).unwrap();
         assert!(contents.contains("cdylib"));
@@ -333,7 +388,7 @@ mod tests {
     #[test]
     fn backend_bin_main_uses_tokio_main() {
         let root = tempdir().unwrap();
-        scaffold(root.path(), "my-app").unwrap();
+        scaffold(root.path(), "my-app", true).unwrap();
         let contents =
             std::fs::read_to_string(root.path().join("my-app/backend/src/bin/main.rs")).unwrap();
         assert!(contents.contains("tokio::main"));
@@ -342,14 +397,14 @@ mod tests {
     #[test]
     fn backend_has_lib_rs() {
         let root = tempdir().unwrap();
-        scaffold(root.path(), "my-app").unwrap();
+        scaffold(root.path(), "my-app", true).unwrap();
         assert!(root.path().join("my-app/backend/src/lib.rs").exists());
     }
 
     #[test]
     fn backend_has_configuration_directory() {
         let root = tempdir().unwrap();
-        scaffold(root.path(), "my-app").unwrap();
+        scaffold(root.path(), "my-app", true).unwrap();
         assert!(
             root.path()
                 .join("my-app/backend/configuration/base.yaml")
@@ -370,7 +425,7 @@ mod tests {
     #[test]
     fn backend_configuration_default_port_is_3001() {
         let root = tempdir().unwrap();
-        scaffold(root.path(), "my-app").unwrap();
+        scaffold(root.path(), "my-app", true).unwrap();
         let contents =
             std::fs::read_to_string(root.path().join("my-app/backend/configuration/base.yaml"))
                 .unwrap();
@@ -380,14 +435,14 @@ mod tests {
     #[test]
     fn backend_has_startup_module() {
         let root = tempdir().unwrap();
-        scaffold(root.path(), "my-app").unwrap();
+        scaffold(root.path(), "my-app", true).unwrap();
         assert!(root.path().join("my-app/backend/src/startup.rs").exists());
     }
 
     #[test]
     fn backend_has_error_and_response_modules() {
         let root = tempdir().unwrap();
-        scaffold(root.path(), "my-app").unwrap();
+        scaffold(root.path(), "my-app", true).unwrap();
         assert!(root.path().join("my-app/backend/src/error.rs").exists());
         assert!(root.path().join("my-app/backend/src/response.rs").exists());
     }
@@ -395,7 +450,7 @@ mod tests {
     #[test]
     fn backend_api_health_check_returns_api_response() {
         let root = tempdir().unwrap();
-        scaffold(root.path(), "my-app").unwrap();
+        scaffold(root.path(), "my-app", true).unwrap();
         let contents =
             std::fs::read_to_string(root.path().join("my-app/backend/src/api/mod.rs")).unwrap();
         assert!(contents.contains("ApiResponse"));
@@ -404,7 +459,7 @@ mod tests {
     #[test]
     fn backend_build_rs_uses_env_var_not_cfg_macro() {
         let root = tempdir().unwrap();
-        scaffold(root.path(), "my-app").unwrap();
+        scaffold(root.path(), "my-app", true).unwrap();
         let contents =
             std::fs::read_to_string(root.path().join("my-app/backend/build.rs")).unwrap();
         assert!(contents.contains("CARGO_FEATURE_EMBED_ASSETS"));
@@ -415,7 +470,7 @@ mod tests {
     #[test]
     fn backend_cargo_toml_has_embed_assets_feature_with_include_dir() {
         let root = tempdir().unwrap();
-        scaffold(root.path(), "my-app").unwrap();
+        scaffold(root.path(), "my-app", true).unwrap();
         let contents =
             std::fs::read_to_string(root.path().join("my-app/backend/Cargo.toml")).unwrap();
         assert!(contents.contains("embed-assets"));
@@ -425,7 +480,7 @@ mod tests {
     #[test]
     fn shared_lib_does_not_use_deny_unknown_fields() {
         let root = tempdir().unwrap();
-        scaffold(root.path(), "my-app").unwrap();
+        scaffold(root.path(), "my-app", true).unwrap();
         let contents =
             std::fs::read_to_string(root.path().join("my-app/shared/src/lib.rs")).unwrap();
         assert!(contents.contains("HelloResponse"));
@@ -441,14 +496,14 @@ mod tests {
     fn fails_if_directory_already_exists() {
         let root = tempdir().unwrap();
         std::fs::create_dir(root.path().join("my-app")).unwrap();
-        let result = scaffold(root.path(), "my-app");
+        let result = scaffold(root.path(), "my-app", true);
         assert!(matches!(result, Err(InitError::AlreadyExists(_))));
     }
 
     #[test]
     fn project_name_substituted_into_crate_names() {
         let root = tempdir().unwrap();
-        scaffold(root.path(), "cool-project").unwrap();
+        scaffold(root.path(), "cool-project", true).unwrap();
         let contents =
             std::fs::read_to_string(root.path().join("cool-project/backend/Cargo.toml")).unwrap();
         assert!(contents.contains("cool-project"));
@@ -457,7 +512,7 @@ mod tests {
     #[test]
     fn shared_lib_has_compile_time_trait_assertions() {
         let root = tempdir().unwrap();
-        scaffold(root.path(), "my-app").unwrap();
+        scaffold(root.path(), "my-app", true).unwrap();
         let contents =
             std::fs::read_to_string(root.path().join("my-app/shared/src/lib.rs")).unwrap();
         assert!(contents.contains("assert_serialize"));
@@ -468,7 +523,7 @@ mod tests {
     #[test]
     fn shared_cargo_toml_has_serde_json_dev_dependency() {
         let root = tempdir().unwrap();
-        scaffold(root.path(), "my-app").unwrap();
+        scaffold(root.path(), "my-app", true).unwrap();
         let contents =
             std::fs::read_to_string(root.path().join("my-app/shared/Cargo.toml")).unwrap();
         assert!(contents.contains("[dev-dependencies]"));
@@ -478,7 +533,7 @@ mod tests {
     #[test]
     fn backend_api_uses_status_response_not_json_macro() {
         let root = tempdir().unwrap();
-        scaffold(root.path(), "my-app").unwrap();
+        scaffold(root.path(), "my-app", true).unwrap();
         let contents =
             std::fs::read_to_string(root.path().join("my-app/backend/src/api/mod.rs")).unwrap();
         assert!(contents.contains("StatusResponse"));
@@ -491,7 +546,7 @@ mod tests {
     #[test]
     fn frontend_imports_and_fetches_status_response() {
         let root = tempdir().unwrap();
-        scaffold(root.path(), "my-app").unwrap();
+        scaffold(root.path(), "my-app", true).unwrap();
         let contents =
             std::fs::read_to_string(root.path().join("my-app/frontend/src/lib.rs")).unwrap();
         assert!(contents.contains("StatusResponse"));
@@ -501,40 +556,40 @@ mod tests {
     #[test]
     fn fails_if_project_name_is_empty() {
         let root = tempdir().unwrap();
-        let result = scaffold(root.path(), "");
+        let result = scaffold(root.path(), "", true);
         assert!(matches!(result, Err(InitError::InvalidName(_))));
     }
 
     #[test]
     fn fails_if_project_name_has_invalid_characters() {
         let root = tempdir().unwrap();
-        let result = scaffold(root.path(), "test app");
+        let result = scaffold(root.path(), "test app", true);
         assert!(matches!(result, Err(InitError::InvalidName(_))));
 
-        let result = scaffold(root.path(), "test\"app");
+        let result = scaffold(root.path(), "test\"app", true);
         assert!(matches!(result, Err(InitError::InvalidName(_))));
 
-        let result = scaffold(root.path(), "test/app");
+        let result = scaffold(root.path(), "test/app", true);
         assert!(matches!(result, Err(InitError::InvalidName(_))));
     }
 
     #[test]
     fn fails_if_project_name_is_reserved_word() {
         let root = tempdir().unwrap();
-        let result = scaffold(root.path(), "test");
+        let result = scaffold(root.path(), "test", true);
         assert!(matches!(result, Err(InitError::InvalidName(_))));
 
-        let result = scaffold(root.path(), "build");
+        let result = scaffold(root.path(), "build", true);
         assert!(matches!(result, Err(InitError::InvalidName(_))));
 
-        let result = scaffold(root.path(), "fn");
+        let result = scaffold(root.path(), "fn", true);
         assert!(matches!(result, Err(InitError::InvalidName(_))));
     }
 
     #[test]
     fn backend_configuration_rs_has_find_configuration_dir() {
         let root = tempdir().unwrap();
-        scaffold(root.path(), "my-app").unwrap();
+        scaffold(root.path(), "my-app", true).unwrap();
         let contents =
             std::fs::read_to_string(root.path().join("my-app/backend/src/configuration.rs"))
                 .unwrap();
@@ -547,7 +602,7 @@ mod tests {
     #[test]
     fn backend_configuration_rs_has_effective_port() {
         let root = tempdir().unwrap();
-        scaffold(root.path(), "my-app").unwrap();
+        scaffold(root.path(), "my-app", true).unwrap();
         let contents =
             std::fs::read_to_string(root.path().join("my-app/backend/src/configuration.rs"))
                 .unwrap();
@@ -564,10 +619,10 @@ mod tests {
     #[test]
     fn fails_if_project_name_starts_with_invalid_char() {
         let root = tempdir().unwrap();
-        let result = scaffold(root.path(), "-test");
+        let result = scaffold(root.path(), "-test", true);
         assert!(matches!(result, Err(InitError::InvalidName(_))));
 
-        let result = scaffold(root.path(), "_test");
+        let result = scaffold(root.path(), "_test", true);
         assert!(matches!(result, Err(InitError::InvalidName(_))));
     }
 
@@ -575,7 +630,75 @@ mod tests {
     fn fails_if_project_name_too_long() {
         let root = tempdir().unwrap();
         let long_name = "a".repeat(65);
-        let result = scaffold(root.path(), &long_name);
+        let result = scaffold(root.path(), &long_name, true);
         assert!(matches!(result, Err(InitError::InvalidName(_))));
+    }
+
+    #[test]
+    fn creates_dockerfile_when_include_deploy_is_true() {
+        let root = tempdir().unwrap();
+        scaffold(root.path(), "my-app", true).unwrap();
+        assert!(root.path().join("my-app/Dockerfile").exists());
+    }
+
+    #[test]
+    fn creates_dockerignore_when_include_deploy_is_true() {
+        let root = tempdir().unwrap();
+        scaffold(root.path(), "my-app", true).unwrap();
+        assert!(root.path().join("my-app/.dockerignore").exists());
+    }
+
+    #[test]
+    fn creates_fly_toml_when_include_deploy_is_true() {
+        let root = tempdir().unwrap();
+        scaffold(root.path(), "my-app", true).unwrap();
+        assert!(root.path().join("my-app/fly.toml").exists());
+    }
+
+    #[test]
+    fn skips_deployment_files_when_include_deploy_is_false() {
+        let root = tempdir().unwrap();
+        scaffold(root.path(), "my-app", false).unwrap();
+        assert!(!root.path().join("my-app/Dockerfile").exists());
+        assert!(!root.path().join("my-app/.dockerignore").exists());
+        assert!(!root.path().join("my-app/fly.toml").exists());
+    }
+
+    #[test]
+    fn dockerfile_uses_multi_stage_build() {
+        let root = tempdir().unwrap();
+        scaffold(root.path(), "my-app", true).unwrap();
+        let dockerfile =
+            std::fs::read_to_string(root.path().join("my-app/Dockerfile")).unwrap();
+        assert!(dockerfile.contains("FROM chef AS planner"));
+        assert!(dockerfile.contains("FROM chef AS builder"));
+        assert!(dockerfile.contains("FROM debian:bookworm-slim AS runtime"));
+    }
+
+    #[test]
+    fn dockerfile_contains_project_name() {
+        let root = tempdir().unwrap();
+        scaffold(root.path(), "test-project", true).unwrap();
+        let dockerfile =
+            std::fs::read_to_string(root.path().join("test-project/Dockerfile")).unwrap();
+        assert!(dockerfile.contains("test-project-backend"));
+    }
+
+    #[test]
+    fn fly_toml_contains_app_name() {
+        let root = tempdir().unwrap();
+        scaffold(root.path(), "my-cool-app", true).unwrap();
+        let fly_toml =
+            std::fs::read_to_string(root.path().join("my-cool-app/fly.toml")).unwrap();
+        assert!(fly_toml.contains("my-cool-app"));
+    }
+
+    #[test]
+    fn fly_toml_has_correct_internal_port() {
+        let root = tempdir().unwrap();
+        scaffold(root.path(), "my-app", true).unwrap();
+        let fly_toml =
+            std::fs::read_to_string(root.path().join("my-app/fly.toml")).unwrap();
+        assert!(fly_toml.contains("internal_port = 3001"));
     }
 }

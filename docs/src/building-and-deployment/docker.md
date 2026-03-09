@@ -1,6 +1,6 @@
 # Docker
 
-A `Dockerfile` is included in every project scaffolded by `wasm-drydock init`. It uses a multi-stage build to produce a minimal production image.
+A `Dockerfile` and `.dockerignore` are included in every project scaffolded by `wasm-drydock init`. The Dockerfile uses a multi-stage build to produce a minimal production image.
 
 ## Build stages
 
@@ -32,4 +32,12 @@ docker run -p 3001:3001 \
   -e APP_ENVIRONMENT=production \
   -e APP_APPLICATION__HOST=0.0.0.0 \
   my-app
+```
+
+## Skipping deployment files
+
+If you don't need deployment files, use the `--no-deploy` flag:
+
+```bash
+wasm-drydock init my-app --no-deploy
 ```

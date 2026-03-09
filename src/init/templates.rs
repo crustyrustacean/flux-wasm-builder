@@ -171,6 +171,19 @@ static TERA: LazyLock<Tera> = LazyLock::new(|| {
             include_str!("templates/shared/cargo.toml"),
         ),
         ("shared/lib.rs", include_str!("templates/shared/lib.rs")),
+        // Deployment
+        (
+            "deployment/Dockerfile",
+            include_str!("templates/deployment/Dockerfile"),
+        ),
+        (
+            "deployment/dockerignore",
+            include_str!("templates/deployment/dockerignore"),
+        ),
+        (
+            "deployment/fly.toml",
+            include_str!("templates/deployment/fly.toml"),
+        ),
     ])
     .expect("failed to load embedded templates — this is a bug in wasm-drydock");
 
