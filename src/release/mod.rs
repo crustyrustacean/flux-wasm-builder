@@ -3,8 +3,8 @@
 // dependencies
 use crate::build::{BuildConfig, BuildMode, wasm_pack::run_wasm_pack};
 use crate::domain::DrydockConfig;
-use tokio::process::Command;
 use thiserror::Error;
+use tokio::process::Command;
 
 #[derive(Debug, Error)]
 pub enum ReleaseError {

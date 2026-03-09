@@ -3166,7 +3166,7 @@ dependencies = [
 
 [[package]]
 name = "wasm-drydock"
-version = "0.23.3"
+version = "0.23.4"
 dependencies = [
  "actix-rt",
  "actix-web",
