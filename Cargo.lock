@@ -1060,15 +1060,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 
 [[package]]
-name = "home"
-version = "0.5.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cc627f471c528ff0c4a49e1d5e60450c8f6461dd6d10ba9dcd3a61d3dff7728d"
-dependencies = [
- "windows-sys 0.61.2",
-]
-
-[[package]]
 name = "http"
 version = "0.2.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1581,15 +1572,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "112b39cec0b298b6c1999fee3e31427f74f676e4cb9879ed1a121b43661a4154"
 
 [[package]]
-name = "malloc_buf"
-version = "0.0.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "62bb907fe88d54d8d9ce32a3cceab4218ed2f6b7d35617cafe9adf84e43919cb"
-dependencies = [
- "libc",
-]
-
-[[package]]
 name = "matchers"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1647,6 +1629,18 @@ name = "ndk-context"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "27b02d87554356db9e9a873add8782d4ea6e3e58ea071a9adb9a2e8ddb884a8b"
+
+[[package]]
+name = "nix"
+version = "0.31.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5d6d0705320c1e6ba1d912b5e37cf18071b6c2e9b7fa8215a1e8a7651966f5d3"
+dependencies = [
+ "bitflags 2.11.0",
+ "cfg-if",
+ "cfg_aliases",
+ "libc",
+]
 
 [[package]]
 name = "normalize-line-endings"
@@ -1718,12 +1712,28 @@ dependencies = [
 ]
 
 [[package]]
-name = "objc"
-version = "0.2.7"
+name = "objc2"
+version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "915b1b472bc21c53464d6c8461c9d3af805ba1ef837e1cac254428f4a77177b1"
+checksum = "3a12a8ed07aefc768292f076dc3ac8c48f3781c8f2d5851dd3d98950e8c5a89f"
 dependencies = [
- "malloc_buf",
+ "objc2-encode",
+]
+
+[[package]]
+name = "objc2-encode"
+version = "4.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ef25abbcd74fb2609453eb695bd2f860d389e457f67dc17cafc8b8cbc89d0c33"
+
+[[package]]
+name = "objc2-foundation"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e3e0adef53c21f888deb4fa59fc59f7eb17404926ee8a6f59f5df0fd7f9f3272"
+dependencies = [
+ "bitflags 2.11.0",
+ "objc2",
 ]
 
 [[package]]
@@ -2097,12 +2107,6 @@ checksum = "76afc826de14238e6e8c374ddcc1fa19e374fd8dd986b0d2af0d02377261d83c"
 dependencies = [
  "getrandom 0.3.4",
 ]
-
-[[package]]
-name = "raw-window-handle"
-version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f2ff9a1f06a88b01621b7ae906ef0211290d1c8a168a15542486a8f61c0833b9"
 
 [[package]]
 name = "redox_syscall"
@@ -3166,7 +3170,7 @@ dependencies = [
 
 [[package]]
 name = "wasm-drydock"
-version = "0.23.4"
+version = "0.23.5"
 dependencies = [
  "actix-rt",
  "actix-web",
@@ -3177,6 +3181,7 @@ dependencies = [
  "grass",
  "include_dir",
  "mime_guess",
+ "nix",
  "notify-debouncer-mini",
  "predicates",
  "reqwest",
@@ -3249,17 +3254,16 @@ dependencies = [
 
 [[package]]
 name = "webbrowser"
-version = "0.8.15"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "db67ae75a9405634f5882791678772c94ff5f16a66535aae186e26aa0841fc8b"
+checksum = "3f00bb839c1cf1e3036066614cbdcd035ecf215206691ea646aa3c60a24f68f2"
 dependencies = [
- "core-foundation 0.9.4",
- "home",
+ "core-foundation 0.10.1",
  "jni",
  "log",
  "ndk-context",
- "objc",
- "raw-window-handle",
+ "objc2",
+ "objc2-foundation",
  "url",
  "web-sys",
 ]

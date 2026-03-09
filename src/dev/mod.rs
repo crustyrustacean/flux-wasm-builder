@@ -404,8 +404,23 @@ impl ProcessManager {
     async fn restart(&mut self, config: &DrydockConfig) -> Result<(), DevError> {
         // Kill and reap the existing process
         if let Some(mut child) = self.handle.take() {
-            child.kill().await?;
-            child.wait().await?;
+            // Attempt graceful shutdown before escalating to SIGKILL
+            #[cfg(unix)]
+            if let Some(pid) = child.id() {
+                use nix::sys::signal::{Signal, kill};
+                use nix::unistd::Pid;
+                let _ = kill(Pid::from_raw(pid as i32), Signal::SIGTERM);
+            }
+
+            let shutdown =
+                tokio::time::timeout(std::time::Duration::from_secs(5), child.wait()).await;
+
+            if shutdown.is_err() {
+                // Graceful window expired — escalate
+                tracing::warn!("backend did not exit after SIGTERM, sending SIGKILL");
+                child.kill().await?;
+                child.wait().await?;
+            }
         }
 
         // Respawn

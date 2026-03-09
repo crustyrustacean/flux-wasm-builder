@@ -8,6 +8,7 @@
 
 use std::future::Future;
 use tokio::sync::{broadcast, mpsc::Receiver};
+use tracing::Instrument;
 
 use super::DevServerMessage;
 use super::wasm_pack::BuildError;
@@ -87,7 +88,7 @@ pub async fn run_build_loop<F, Fut>(
 
         // Execute build
         let span = tracing::info_span!("rebuild_cycle");
-        let result = span.in_scope(&build_fn).await;
+        let result = build_fn().instrument(span.clone()).await;
 
         match result {
             Ok(()) => {

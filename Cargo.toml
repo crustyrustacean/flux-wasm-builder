@@ -1,6 +1,6 @@
 [package]
 name = "wasm-drydock"
-version = "0.23.4"
+version = "0.23.5"
 edition = "2024"
 
 [[bin]]
@@ -26,7 +26,7 @@ toml = "1.0.3"
 thiserror = "2.0.18"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-webbrowser = "0.8"
+webbrowser = "1.1.0"
 
 [dependencies.include_dir]
 version = "0.7"
@@ -41,6 +41,9 @@ assert_cmd = "2"
 predicates = "3"
 tokio-test = "0.4"
 actix-rt = "2"
+
+[target.'cfg(unix)'.dependencies]
+nix = { version = "0.31.2", features = ["signal"] }
 
 [profile.release]
 lto = true         
