@@ -268,8 +268,7 @@ fn init_dockerfile_uses_multi_stage_build() {
         .assert()
         .success();
 
-    let dockerfile =
-        std::fs::read_to_string(dir.path().join("test-app/Dockerfile")).unwrap();
+    let dockerfile = std::fs::read_to_string(dir.path().join("test-app/Dockerfile")).unwrap();
     assert!(dockerfile.contains("FROM chef AS planner"));
     assert!(dockerfile.contains("FROM chef AS builder"));
     assert!(dockerfile.contains("FROM debian:bookworm-slim AS runtime"));
@@ -284,8 +283,7 @@ fn init_fly_toml_contains_app_name() {
         .assert()
         .success();
 
-    let fly_toml =
-        std::fs::read_to_string(dir.path().join("my-awesome-app/fly.toml")).unwrap();
+    let fly_toml = std::fs::read_to_string(dir.path().join("my-awesome-app/fly.toml")).unwrap();
     assert!(fly_toml.contains("my-awesome-app"));
 }
 

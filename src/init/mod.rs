@@ -668,8 +668,7 @@ mod tests {
     fn dockerfile_uses_multi_stage_build() {
         let root = tempdir().unwrap();
         scaffold(root.path(), "my-app", true).unwrap();
-        let dockerfile =
-            std::fs::read_to_string(root.path().join("my-app/Dockerfile")).unwrap();
+        let dockerfile = std::fs::read_to_string(root.path().join("my-app/Dockerfile")).unwrap();
         assert!(dockerfile.contains("FROM chef AS planner"));
         assert!(dockerfile.contains("FROM chef AS builder"));
         assert!(dockerfile.contains("FROM debian:bookworm-slim AS runtime"));
@@ -688,8 +687,7 @@ mod tests {
     fn fly_toml_contains_app_name() {
         let root = tempdir().unwrap();
         scaffold(root.path(), "my-cool-app", true).unwrap();
-        let fly_toml =
-            std::fs::read_to_string(root.path().join("my-cool-app/fly.toml")).unwrap();
+        let fly_toml = std::fs::read_to_string(root.path().join("my-cool-app/fly.toml")).unwrap();
         assert!(fly_toml.contains("my-cool-app"));
     }
 
@@ -697,8 +695,7 @@ mod tests {
     fn fly_toml_has_correct_internal_port() {
         let root = tempdir().unwrap();
         scaffold(root.path(), "my-app", true).unwrap();
-        let fly_toml =
-            std::fs::read_to_string(root.path().join("my-app/fly.toml")).unwrap();
+        let fly_toml = std::fs::read_to_string(root.path().join("my-app/fly.toml")).unwrap();
         assert!(fly_toml.contains("internal_port = 3001"));
     }
 }

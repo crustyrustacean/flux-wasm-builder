@@ -72,7 +72,11 @@ enum Commands {
 
 async fn run(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
     match cli.command {
-        Commands::Init { name, path, no_deploy } => {
+        Commands::Init {
+            name,
+            path,
+            no_deploy,
+        } => {
             scaffold(&path, &name, !no_deploy)?;
         }
 
