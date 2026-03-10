@@ -375,14 +375,14 @@ mod tests {
     }
 
     #[test]
-    fn frontend_cargo_toml_sets_cdylib_and_pins_yew_022() {
+    fn frontend_cargo_toml_sets_cdylib_and_pins_yew_023() {
         let root = tempdir().unwrap();
         scaffold(root.path(), "my-app", true).unwrap();
         let contents =
             std::fs::read_to_string(root.path().join("my-app/frontend/Cargo.toml")).unwrap();
         assert!(contents.contains("cdylib"));
         assert!(contents.contains("yew"));
-        assert!(contents.contains("0.22.1"));
+        assert!(contents.contains("0.23.0"));
     }
 
     #[test]

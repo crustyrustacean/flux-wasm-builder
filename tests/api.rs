@@ -1,3 +1,7 @@
+// tests/api.rs
+
+// integration tests for the API
+
 use assert_cmd::cargo::cargo_bin_cmd;
 use tempfile::tempdir;
 
