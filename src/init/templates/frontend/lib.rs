@@ -3,7 +3,7 @@ use gloo_net::http::Request;
 use {{ crate_name }}_shared::{HelloResponse, StatusResponse};
 
 #[component]
-fn app() -> Html {
+fn App() -> Html {
     let message = use_state(|| None::<String>);
     let version = use_state(|| None::<String>);
 
